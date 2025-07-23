@@ -11,13 +11,13 @@ import { db, auth } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { UserForm } from './user-form';
 import { InstanceForm } from './instance-form';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 function getBaseUrl() {
   if (typeof window !== 'undefined') {
     return window.location.origin;
   }
-  // Fallback for server-side rendering
   return process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000';
 }
 
@@ -30,6 +30,9 @@ export default function AdminPanel() {
   
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [isInstanceFormOpen, setIsInstanceFormOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [instanceToDelete, setInstanceToDelete] = useState<string | null>(null);
+
   const [selectedUser, setSelectedUser] = useState<User | undefined>(undefined);
   const [selectedInstance, setSelectedInstance] = useState<Instance | undefined>(undefined);
   const { toast } = useToast();
@@ -71,18 +74,16 @@ export default function AdminPanel() {
     try {
       if (userData.id) { // Editing an existing user
         const userRef = doc(db, 'users', userData.id);
-        const { id, password, ...updateData } = userData; // Don't save password field
+        const { id, password, ...updateData } = userData;
         await updateDoc(userRef, updateData as any);
          toast({ title: "Sucesso", description: "Usuário atualizado." });
       } else { // Creating a new user
         if (!userData.password || !userData.email) {
             throw new Error("Email e senha são obrigatórios para novos usuários.");
         }
-        // Step 1: Create user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
         const newAuthUser = userCredential.user;
 
-        // Step 2: Create user document in Firestore with the UID from Auth
         const { password, ...firestoreData } = userData;
         await setDoc(doc(db, "users", newAuthUser.uid), firestoreData);
         toast({ title: "Sucesso", description: "Usuário criado com sucesso." });
@@ -102,8 +103,6 @@ export default function AdminPanel() {
   const handleDeleteUser = async (userId: string) => {
     if (window.confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) {
       try {
-        // Note: This only deletes from Firestore, not from Firebase Auth.
-        // Deleting from Auth is a protected action that typically requires a backend function.
         await deleteDoc(doc(db, 'users', userId));
         toast({ title: "Sucesso", description: "Usuário excluído do banco de dados." });
       } catch (error: any) {
@@ -154,20 +153,27 @@ export default function AdminPanel() {
     }
   };
   
-  const handleDeleteInstance = async (instanceId: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta instância?')) {
-      try {
-        await deleteDoc(doc(db, 'instances', instanceId));
-        toast({ title: "Sucesso", description: "Instância excluída." });
-      } catch (error: any) {
-        console.error("Error deleting instance: ", error);
-         toast({
-          title: "Erro ao excluir instância",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
+ const confirmDeleteInstance = async () => {
+    if (!instanceToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'instances', instanceToDelete));
+      toast({ title: "Sucesso", description: "Instância excluída." });
+    } catch (error: any) {
+      console.error("Error deleting instance: ", error);
+      toast({
+        title: "Erro ao excluir instância",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setInstanceToDelete(null);
     }
+  };
+
+  const openDeleteDialog = (instanceId: string) => {
+    setInstanceToDelete(instanceId);
+    setIsDeleteDialogOpen(true);
   };
 
 
@@ -191,6 +197,21 @@ export default function AdminPanel() {
         onSave={handleSaveInstance}
         instance={selectedInstance}
       />
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a instância.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteInstance}>Confirmar</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
 
       <header className="p-4 border-b border-[#1f2c33] bg-[#202c33]">
         <h2 className="text-xl font-semibold text-white">Painel do Administrador</h2>
@@ -304,7 +325,7 @@ export default function AdminPanel() {
                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" onClick={() => { setSelectedInstance(instance); setIsInstanceFormOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => handleDeleteInstance(instance.id)}>
+                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => openDeleteDialog(instance.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>

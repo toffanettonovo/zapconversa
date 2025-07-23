@@ -18,11 +18,8 @@ const formSchema = z.object({
   email: z.string().email('O e-mail é inválido.'),
   password: z.string().optional(),
   role: z.enum(['admin', 'user']),
-  instanceId: z.string().min(1, 'O ID da instância é obrigatório.'),
+  instanceId: z.string().min(1, 'A associação com uma instância é obrigatória.'),
 }).refine(data => {
-    // Se não há 'id' (ou seja, é um novo usuário), a senha é obrigatória.
-    // Esta lógica é uma aproximação. A verificação real se o usuário é novo ou não
-    // será feita fora do formulário, com base na prop 'user'.
     return true; 
 }, {});
 
@@ -145,9 +142,9 @@ export function UserForm({ isOpen, onOpenChange, onSave, user }: UserFormProps) 
                 name="instanceId"
                 render={({ field }) => (
                     <FormItem>
-                        <Label htmlFor="instanceId">ID da Instância</Label>
+                        <Label htmlFor="instanceId">ID da Instância Associada</Label>
                          <FormControl>
-                            <Input id="instanceId" {...field} className="bg-[#2a3942] border-none" />
+                            <Input id="instanceId" {...field} placeholder="Cole aqui o ID da instância" className="bg-[#2a3942] border-none" />
                          </FormControl>
                         <FormMessage />
                     </FormItem>
