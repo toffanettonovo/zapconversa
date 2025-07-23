@@ -89,6 +89,8 @@ export async function getMediaAsDataUri(instanceId: string, messageKey: any, mes
         mimeType = messageData.imageMessage.mimetype || 'image/jpeg';
       } else if (messageData.documentMessage) {
         mimeType = messageData.documentMessage.mimetype || 'application/pdf';
+      } else if (messageData.stickerMessage) {
+        mimeType = messageData.stickerMessage.mimetype || 'image/webp';
       }
 
       const dataUri = `data:${mimeType};base64,${result.base64}`;

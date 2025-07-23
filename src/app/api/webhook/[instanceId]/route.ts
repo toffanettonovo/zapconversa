@@ -63,6 +63,10 @@ async function handleMessageUpsert(instanceId: string, data: any) {
     messageText = '';
     messageType = 'sticker';
     mediaName = null;
+    const mediaResult = await getMediaAsDataUri(instanceId, key, messageData);
+    if(mediaResult.dataUri) {
+        mediaUrl = mediaResult.dataUri;
+    }
   }
 
   // Label para a lista de conversas

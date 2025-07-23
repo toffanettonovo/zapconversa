@@ -42,6 +42,20 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         </Dialog>
       );
     }
+    
+    if (message.messageType === 'sticker' && message.mediaUrl) {
+      return (
+        <div className="relative w-40 h-40">
+            <Image
+                src={message.mediaUrl}
+                alt={'Figurinha'}
+                layout="fill"
+                objectFit="contain"
+                unoptimized // Stickers can be animated webp, which next/image doesn't always optimize well
+            />
+        </div>
+      );
+    }
 
     if (message.messageType === 'document' && message.mediaUrl) {
       return (
