@@ -30,7 +30,8 @@ export default function ChatLayout() {
           setUserData({ id: doc.id, ...doc.data() } as User);
         } else {
           // Handle case where user exists in Auth but not Firestore
-          console.error("User not found in Firestore");
+          // User might have been created in console, but not in our 'users' collection
+          setUserData(null);
         }
       });
 
