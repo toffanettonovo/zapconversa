@@ -12,3 +12,6 @@ console.log('Iniciando túnel do ngrok para a porta 9002...');
 ngrok.connect({ addr: 9002, authtoken_from_env: true })
 	.then(listener => console.log(`Túnel estabelecido em: ${listener.url()}`))
     .catch(err => {
+        console.error('Erro ao estabelecer túnel do ngrok:', err);
+        process.exit(1);
+    });
