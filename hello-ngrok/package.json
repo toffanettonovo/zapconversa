@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@ngrok/ngrok": "^1.5.1"
+    "@ngrok/ngrok": "^1.5.1",
+    "dotenv": "^16.4.5"
   }
 }

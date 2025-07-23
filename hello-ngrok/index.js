@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').resolve(process.cwd(), '.env') });
 const ngrok = require('@ngrok/ngrok');
 
 // Este script agora apenas inicia o túnel do ngrok e o aponta
@@ -10,6 +11,4 @@ console.log('Iniciando túnel do ngrok para a porta 9002...');
 ngrok.connect({ addr: 9002, authtoken_from_env: true })
 	.then(listener => console.log(`Túnel estabelecido em: ${listener.url()}`))
     .catch(err => {
-        console.error('Erro ao iniciar o ngrok:', err);
-        process.exit(1);
-    });
+        console.
