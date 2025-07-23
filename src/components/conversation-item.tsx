@@ -19,11 +19,12 @@ const getIconForLastMessage = (message: string) => {
 export default function ConversationItem({ conversation, isSelected, onSelect }: ConversationItemProps) {
   return (
     <div
-      className={cn("flex items-start gap-3 p-3 border-b border-[#1f2c33] cursor-pointer transition-colors",
-        isSelected ? 'bg-[#2a3942]' : 'hover:bg-[#1f2c33]'
+      className={cn("flex items-start gap-3 p-3 border-b border-[#1f2c33] cursor-pointer transition-colors relative",
+        isSelected ? 'bg-[#00a884]' : 'hover:bg-[#1f2c33]'
       )}
       onClick={onSelect}
     >
+      {isSelected && <div className="absolute left-0 top-0 h-full w-1 bg-[#00a884]" />}
       <Avatar className="h-12 w-12">
         <AvatarImage src={conversation.avatar} alt={conversation.name} data-ai-hint={conversation['data-ai-hint']} />
         <AvatarFallback>{conversation.name.charAt(0)}</AvatarFallback>
