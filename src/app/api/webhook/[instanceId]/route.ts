@@ -10,6 +10,39 @@ type RouteContext = {
   };
 };
 
+async function handleMessageReaction(instanceId: string, data: any) {
+  const reactionData = data.message.reactionMessage;
+  const conversationId = data.key.remoteJid;
+  const targetMessageId = reactionData.key.id;
+  const reactionEmoji = reactionData.text;
+
+  if (!conversationId || !targetMessageId) {
+    console.warn('Reação recebida sem conversationId ou targetMessageId. Ignorando.');
+    return;
+  }
+
+  const messagesCollectionRef = collection(db, 'conversations', conversationId, 'messages');
+  const q = query(messagesCollectionRef, where("messageId", "==", targetMessageId), limit(1));
+
+  try {
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const messageDoc = querySnapshot.docs[0];
+      const messageRef = doc(db, 'conversations', conversationId, 'messages', messageDoc.id);
+      
+      // Se a reação for uma string vazia, o usuário removeu a reação.
+      const newReaction = reactionEmoji || null;
+      
+      await updateDoc(messageRef, { reaction: newReaction });
+      console.log(`Reação "${newReaction}" atualizada para a mensagem ${targetMessageId}`);
+    } else {
+      console.warn(`Mensagem original com ID ${targetMessageId} não encontrada para adicionar reação.`);
+    }
+  } catch (error) {
+    console.error('Erro ao processar reação da mensagem:', error);
+  }
+}
+
 async function handleMessageUpsert(instanceId: string, data: any) {
   const messageData = data.message;
   const key = data.key;
@@ -19,9 +52,10 @@ async function handleMessageUpsert(instanceId: string, data: any) {
     return;
   }
 
-  // Detect and ignore reaction messages for now
+  // Se for uma reação, processa e encerra o fluxo aqui.
   if (messageData.reactionMessage) {
-    console.log(`Reação recebida (${messageData.reactionMessage.text}) para a mensagem ${messageData.reactionMessage.key.id}. Ignorando.`);
+    console.log(`Reação recebida: "${messageData.reactionMessage.text}" para a mensagem ${messageData.reactionMessage.key.id}.`);
+    await handleMessageReaction(instanceId, data);
     return;
   }
   

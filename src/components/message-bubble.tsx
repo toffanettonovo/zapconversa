@@ -89,18 +89,28 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <div className={cn('flex', isMine ? 'justify-end' : 'justify-start')}>
-      <div
-        className={cn(
-          'max-w-xl rounded-lg px-2 py-1.5 shadow-md',
-          isMine ? 'bg-[#005c4b]' : 'bg-[#202c33]'
-        )}
-      >
-        {renderMessageContent()}
-        {renderCaption()}
-        <div className={cn('flex items-center justify-end text-xs mt-1', isMine ? 'text-gray-400' : 'text-gray-500')}>
-          <span>{message.timestamp as string}</span>
-          {isMine && <CheckCheck className="h-4 w-4 ml-1 text-[#53bdeb]" />}
+      <div className="relative">
+        <div
+          className={cn(
+            'max-w-xl rounded-lg px-2 py-1.5 shadow-md',
+            isMine ? 'bg-[#005c4b]' : 'bg-[#202c33]'
+          )}
+        >
+          {renderMessageContent()}
+          {renderCaption()}
+          <div className={cn('flex items-center justify-end text-xs mt-1', isMine ? 'text-gray-400' : 'text-gray-500')}>
+            <span>{message.timestamp as string}</span>
+            {isMine && <CheckCheck className="h-4 w-4 ml-1 text-[#53bdeb]" />}
+          </div>
         </div>
+        {message.reaction && (
+          <div className={cn(
+            "absolute -bottom-2 text-xs rounded-full bg-[#202c33] p-1 border-2 border-[#0b141a]",
+            isMine ? "-right-2" : "-left-2"
+          )}>
+            {message.reaction}
+          </div>
+        )}
       </div>
     </div>
   );

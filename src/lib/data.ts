@@ -6,6 +6,7 @@ export type Message = {
   messageType?: 'text' | 'image' | 'audio' | 'video' | 'sticker' | 'document' | 'unsupported';
   mediaUrl?: string | null;
   mediaName?: string;
+  reaction?: string | null;
 };
 
 export type Conversation = {
