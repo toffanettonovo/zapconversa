@@ -54,36 +54,53 @@ export default function AdminPanel() {
   }, []);
 
   const handleSaveUser = async (user: Omit<User, 'id'> | User) => {
-    if ('id' in user) {
-      const userRef = doc(db, 'users', user.id);
-      const { id, ...userData } = user;
-      await updateDoc(userRef, userData);
-    } else {
-      await addDoc(collection(db, 'users'), user);
+    try {
+      if ('id' in user) {
+        const userRef = doc(db, 'users', user.id);
+        const { id, ...userData } = user;
+        await updateDoc(userRef, userData);
+      } else {
+        await addDoc(collection(db, 'users'), user);
+      }
+      setIsUserFormOpen(false);
+    } catch (error) {
+      console.error("Error saving user: ", error);
+      // You can add a toast notification here to inform the user
     }
-    setIsUserFormOpen(false);
   };
   
   const handleDeleteUser = async (userId: string) => {
      if (window.confirm('Tem certeza que deseja excluir este usuário?')) {
-      await deleteDoc(doc(db, 'users', userId));
+      try {
+        await deleteDoc(doc(db, 'users', userId));
+      } catch (error) {
+        console.error("Error deleting user: ", error);
+      }
     }
   };
 
   const handleSaveInstance = async (instance: Omit<Instance, 'id'> | Instance) => {
-    if ('id' in instance) {
-      const instanceRef = doc(db, 'instances', instance.id);
-       const { id, ...instanceData } = instance;
-      await updateDoc(instanceRef, instanceData);
-    } else {
-      await addDoc(collection(db, 'instances'), instance);
+    try {
+      if ('id' in instance) {
+        const instanceRef = doc(db, 'instances', instance.id);
+        const { id, ...instanceData } = instance;
+        await updateDoc(instanceRef, instanceData);
+      } else {
+        await addDoc(collection(db, 'instances'), instance);
+      }
+      setIsInstanceFormOpen(false);
+    } catch (error) {
+      console.error("Error saving instance: ", error);
     }
-    setIsInstanceFormOpen(false);
   };
   
   const handleDeleteInstance = async (instanceId: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta instância?')) {
-      await deleteDoc(doc(db, 'instances', instanceId));
+      try {
+        await deleteDoc(doc(db, 'instances', instanceId));
+      } catch (error) {
+        console.error("Error deleting instance: ", error);
+      }
     }
   };
 
@@ -132,7 +149,7 @@ export default function AdminPanel() {
                 ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-[#1f2c33]">
+                    <TableRow className="border-[#1f2c33] hover:bg-transparent">
                       <TableHead className="text-gray-400">Nome</TableHead>
                       <TableHead className="text-gray-400">Função</TableHead>
                       <TableHead className="text-gray-400">Instância</TableHead>
@@ -141,7 +158,7 @@ export default function AdminPanel() {
                   </TableHeader>
                   <TableBody>
                     {users.length > 0 ? users.map((user) => (
-                      <TableRow key={user.id} className="border-[#1f2c33]">
+                      <TableRow key={user.id} className="border-[#1f2c33] hover:bg-[#1f2c33]">
                         <TableCell className="font-medium text-white">{user.name}</TableCell>
                         <TableCell>
                           <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className={user.role === 'admin' ? 'bg-[#00a884] text-white' : 'bg-gray-600 text-gray-200'}>
@@ -159,7 +176,7 @@ export default function AdminPanel() {
                         </TableCell>
                       </TableRow>
                     )) : (
-                      <TableRow className="border-[#1f2c33]">
+                      <TableRow className="border-[#1f2c33] hover:bg-transparent">
                         <TableCell colSpan={4} className="text-center h-24 text-gray-400">Nenhum usuário encontrado.</TableCell>
                       </TableRow>
                     )}
@@ -189,7 +206,7 @@ export default function AdminPanel() {
                 ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-[#1f2c33]">
+                    <TableRow className="border-[#1f2c33] hover:bg-transparent">
                       <TableHead className="text-gray-400">Nome</TableHead>
                       <TableHead className="text-gray-400">URL da API</TableHead>
                       <TableHead className="text-gray-400">Webhook</TableHead>
@@ -199,7 +216,7 @@ export default function AdminPanel() {
                   </TableHeader>
                   <TableBody>
                     {instances.length > 0 ? instances.map((instance) => (
-                      <TableRow key={instance.id} className="border-[#1f2c33]">
+                      <TableRow key={instance.id} className="border-[#1f2c33] hover:bg-[#1f2c33]">
                         <TableCell className="font-medium text-white">{instance.name}</TableCell>
                         <TableCell className="text-gray-300">{instance.apiUrl}</TableCell>
                         <TableCell className="text-gray-300">{instance.webhook}</TableCell>
@@ -219,7 +236,7 @@ export default function AdminPanel() {
                         </TableCell>
                       </TableRow>
                     )) : (
-                       <TableRow className="border-[#1f2c33]">
+                       <TableRow className="border-[#1f2c33] hover:bg-transparent">
                         <TableCell colSpan={5} className="text-center h-24 text-gray-400">Nenhuma instância encontrada.</TableCell>
                       </TableRow>
                     )}
