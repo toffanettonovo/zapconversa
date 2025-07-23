@@ -13,6 +13,15 @@ import { UserForm } from './user-form';
 import { InstanceForm } from './instance-form';
 import { useToast } from '@/hooks/use-toast';
 
+function getBaseUrl() {
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  // Fallback for server-side rendering
+  return process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000';
+}
+
+
 export default function AdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
   const [instances, setInstances] = useState<Instance[]>([]);
@@ -35,6 +44,7 @@ export default function AdminPanel() {
       (error) => {
         console.error("Error fetching users: ", error);
         setLoadingUsers(false);
+        toast({ title: "Erro ao buscar usuários", description: "Não foi possível carregar os dados dos usuários.", variant: "destructive" });
       }
     );
 
@@ -47,6 +57,7 @@ export default function AdminPanel() {
       (error) => {
         console.error("Error fetching instances: ", error);
         setLoadingInstances(false);
+        toast({ title: "Erro ao buscar instâncias", description: "Não foi possível carregar os dados das instâncias.", variant: "destructive" });
       }
     );
     
@@ -54,7 +65,7 @@ export default function AdminPanel() {
       unsubscribeUsers();
       unsubscribeInstances();
     };
-  }, []);
+  }, [toast]);
 
   const handleSaveUser = async (userData: Omit<User, 'id'> & { id?: string; password?: string }) => {
     try {
@@ -106,23 +117,29 @@ export default function AdminPanel() {
     }
   };
 
-  const handleSaveInstance = async (instanceData: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity'> & { id?: string }) => {
+  const handleSaveInstance = async (instanceData: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity' | 'webhookUrl'> & { id?: string }) => {
     try {
+      const baseUrl = getBaseUrl();
       if (instanceData.id) { // Editing
         const instanceRef = doc(db, 'instances', instanceData.id);
         const { id, ...updateData } = instanceData;
+        const webhookUrl = `${baseUrl}/api/webhook/${id}`;
         await updateDoc(instanceRef, {
           ...updateData,
+          webhookUrl,
           updatedAt: serverTimestamp(),
         });
         toast({ title: "Sucesso", description: "Instância atualizada." });
       } else { // Creating
-        await addDoc(collection(db, 'instances'), {
+        const newDocRef = await addDoc(collection(db, 'instances'), {
           ...instanceData,
           lastActivity: serverTimestamp(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+          webhookUrl: '', // Placeholder
         });
+         const webhookUrl = `${baseUrl}/api/webhook/${newDocRef.id}`;
+         await updateDoc(newDocRef, { webhookUrl });
         toast({ title: "Sucesso", description: "Instância criada." });
       }
       setIsInstanceFormOpen(false);
@@ -276,7 +293,7 @@ export default function AdminPanel() {
                       <TableRow key={instance.id} className="border-[#1f2c33] hover:bg-[#1f2c33]">
                         <TableCell className="font-medium text-white">{instance.name}</TableCell>
                         <TableCell className="text-gray-300">{instance.apiUrl}</TableCell>
-                        <TableCell className="text-gray-300">{instance.webhookUrl}</TableCell>
+                        <TableCell className="text-gray-300 text-xs">{instance.webhookUrl}</TableCell>
                         <TableCell>
                           <Badge variant={instance.isActive ? 'default' : 'destructive'} className={`flex items-center gap-2 w-fit ${instance.isActive ? 'bg-green-600' : 'bg-red-600'} text-white`}>
                             <Circle className={`h-2 w-2 ${instance.isActive ? 'fill-green-400' : 'fill-red-400'}`} />

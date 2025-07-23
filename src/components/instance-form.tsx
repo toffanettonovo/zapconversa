@@ -12,30 +12,31 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { type Instance } from '@/lib/data';
+import { Copy } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório.'),
   apiUrl: z.string().url('A URL da API é inválida.'),
   apiKey: z.string().min(1, 'A chave da API é obrigatória.'),
-  webhookUrl: z.string().optional(),
   isActive: z.boolean(),
 });
 
 type InstanceFormProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (instance: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity'> | (Omit<Instance, 'createdAt' | 'updatedAt' | 'lastActivity'> & { id: string })) => void;
+  onSave: (instance: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity' | 'webhookUrl'> | (Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity' | 'webhookUrl'> & { id: string })) => void;
   instance?: Instance;
 };
 
 export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: InstanceFormProps) {
+  const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: instance || {
       name: '',
       apiUrl: '',
       apiKey: '',
-      webhookUrl: '',
       isActive: true,
     },
   });
@@ -45,13 +46,19 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
       name: '',
       apiUrl: '',
       apiKey: '',
-      webhookUrl: '',
       isActive: true,
     });
   }, [instance, form, isOpen]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     onSave(instance ? { ...instance, ...values } : values);
+  };
+  
+  const handleCopyWebhook = () => {
+    if (instance?.webhookUrl) {
+      navigator.clipboard.writeText(instance.webhookUrl);
+      toast({ title: 'Copiado!', description: 'URL do Webhook copiada para a área de transferência.' });
+    }
   };
 
   return (
@@ -104,19 +111,18 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
                 </FormItem>
               )}
             />
-             <FormField
-              control={form.control}
-              name="webhookUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <Label htmlFor="webhookUrl">Webhook URL</Label>
-                  <FormControl>
-                    <Input id="webhookUrl" {...field} className="bg-[#2a3942] border-none" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {instance && (
+              <div className="space-y-2">
+                 <Label>URL do Webhook</Label>
+                 <div className="flex items-center gap-2">
+                    <Input readOnly value={instance.webhookUrl} className="bg-[#2a3942] border-none text-gray-400" />
+                    <Button type="button" size="icon" variant="ghost" onClick={handleCopyWebhook}>
+                        <Copy className="h-4 w-4"/>
+                    </Button>
+                 </div>
+                 <p className="text-xs text-gray-500">Use esta URL para configurar o webhook na sua instância da Evolution API.</p>
+              </div>
+            )}
             <FormField
               control={form.control}
               name="isActive"
