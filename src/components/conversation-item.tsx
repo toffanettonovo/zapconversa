@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Conversation } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { ImageIcon, Mic, Settings } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 type ConversationItemProps = {
   conversation: Conversation;
@@ -11,25 +12,28 @@ type ConversationItemProps = {
 };
 
 function formatTimestamp(timestamp: any): string {
-    if (!timestamp) return '';
-    if (typeof timestamp === 'string') return timestamp;
-    
-    const date = timestamp.toDate ? timestamp.toDate() : new Date();
-    const now = new Date();
-    
-    if (date.toDateString() === now.toDateString()) {
-      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    }
-    
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    if (date.toDateString() === yesterday.toDateString()) {
-      return 'ontem';
-    }
+  if (!timestamp) return '';
+  if (typeof timestamp === 'string' && timestamp !== '') return timestamp;
+  if (!timestamp.toDate) return '';
 
-    return date.toLocaleDateString('pt-BR');
+  const date = timestamp.toDate();
+  const now = new Date();
+
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  if (isToday) {
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  if (isYesterday) {
+    return 'ontem';
+  }
+
+  return date.toLocaleDateString('pt-BR');
 }
-
 
 const getIconForLastMessage = (conversation: Conversation) => {
     if (conversation.id === 'admin') return <Settings className="h-4 w-4 mr-1 text-gray-400" />;
@@ -40,6 +44,14 @@ const getIconForLastMessage = (conversation: Conversation) => {
 }
 
 export default function ConversationItem({ conversation, isSelected, onSelect }: ConversationItemProps) {
+  const [displayTimestamp, setDisplayTimestamp] = useState('');
+
+  useEffect(() => {
+    // This code runs only on the client, after hydration.
+    // This prevents the server-rendered timestamp from mismatching the client-rendered one.
+    setDisplayTimestamp(formatTimestamp(conversation.timestamp));
+  }, [conversation.timestamp]);
+
   return (
     <div
       className={cn("flex items-start gap-3 p-3 border-b border-[#1f2c33] cursor-pointer transition-colors relative",
@@ -59,7 +71,7 @@ export default function ConversationItem({ conversation, isSelected, onSelect }:
             "text-xs",
              isSelected ? 'text-white/90' : 'text-gray-400'
           )}>
-            {formatTimestamp(conversation.timestamp)}
+            {displayTimestamp}
           </span>
         </div>
         <div className="flex justify-between items-center mt-1">
