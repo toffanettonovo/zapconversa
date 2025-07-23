@@ -20,7 +20,7 @@ export default function ConversationItem({ conversation, isSelected, onSelect }:
   return (
     <div
       className={cn("flex items-start gap-3 p-3 border-b border-[#1f2c33] cursor-pointer transition-colors relative",
-        isSelected ? 'bg-[#363c3e]' : 'hover:bg-[#1f2c33]'
+        isSelected ? 'bg-[#2a3942]' : 'hover:bg-[#1f2c33]'
       )}
       onClick={onSelect}
     >
@@ -34,7 +34,7 @@ export default function ConversationItem({ conversation, isSelected, onSelect }:
           <h3 className="font-semibold text-white truncate">{conversation.name}</h3>
           <span className={cn(
             "text-xs",
-            isSelected ? 'text-white/80' : 'text-gray-400'
+             isSelected ? 'text-white/80' : 'text-gray-400'
           )}>
             {conversation.timestamp}
           </span>
