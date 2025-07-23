@@ -13,6 +13,7 @@ import { UserForm } from './user-form';
 import { InstanceForm } from './instance-form';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import WebhookLogs from './webhook-logs';
 
 function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_WEB_PREVIEW_URL) {
@@ -21,7 +22,7 @@ function getBaseUrl() {
   if (typeof window !== 'undefined') {
     return window.location.origin;
   }
-  return process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000';
+  return process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:9002';
 }
 
 
@@ -34,7 +35,7 @@ export default function AdminPanel() {
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [isInstanceFormOpen, setIsInstanceFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [instanceToDelete, setInstanceToDelete] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{id: string, type: 'instance' | 'user'} | null>(null);
 
   const [selectedUser, setSelectedUser] = useState<User | undefined>(undefined);
   const [selectedInstance, setSelectedInstance] = useState<Instance | undefined>(undefined);
@@ -111,22 +112,36 @@ export default function AdminPanel() {
     }
   };
   
-  const handleDeleteUser = async (userId: string) => {
-    // Note: This only deletes from Firestore. The user still exists in Firebase Auth.
-    // A more complete solution would involve a Cloud Function to delete the user from Auth.
-    if (window.confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita e apenas removerá o perfil do banco de dados, não da autenticação.')) {
-      try {
-        await deleteDoc(doc(db, 'users', userId));
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+
+    const { id, type } = itemToDelete;
+
+    try {
+      if (type === 'instance') {
+        await deleteDoc(doc(db, 'instances', id));
+        toast({ title: "Sucesso", description: "Instância excluída." });
+      } else if (type === 'user') {
+        // Note: This only deletes from Firestore. The user still exists in Firebase Auth.
+        // A more complete solution would involve a Cloud Function to delete the user from Auth.
+        await deleteDoc(doc(db, 'users', id));
         toast({ title: "Sucesso", description: "Usuário excluído do banco de dados." });
-      } catch (error: any) {
-        console.error("Error deleting user: ", error);
-        toast({
-          title: "Erro ao excluir usuário",
-          description: error.message,
-          variant: "destructive",
-        });
       }
+    } catch (error: any) {
+       toast({
+        title: `Erro ao excluir ${type === 'instance' ? 'instância' : 'usuário'}`,
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
+  };
+
+  const openDeleteDialog = (id: string, type: 'instance' | 'user') => {
+    setItemToDelete({ id, type });
+    setIsDeleteDialogOpen(true);
   };
 
   const handleSaveInstance = async (instanceData: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity' | 'webhookUrl'> & { id?: string }) => {
@@ -166,36 +181,12 @@ export default function AdminPanel() {
     }
   };
   
- const confirmDeleteInstance = async () => {
-    if (!instanceToDelete) return;
-    try {
-      await deleteDoc(doc(db, 'instances', instanceToDelete));
-      toast({ title: "Sucesso", description: "Instância excluída." });
-    } catch (error: any) {
-      console.error("Error deleting instance: ", error);
-      toast({
-        title: "Erro ao excluir instância",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setInstanceToDelete(null);
-    }
-  };
-
-  const openDeleteDialog = (instanceId: string) => {
-    setInstanceToDelete(instanceId);
-    setIsDeleteDialogOpen(true);
-  };
-  
   const handleCopyWebhook = (url: string) => {
     if (url) {
       navigator.clipboard.writeText(url);
       toast({ title: 'Copiado!', description: 'URL do Webhook copiada para a área de transferência.' });
     }
   };
-
 
   return (
     <div className="flex-1 flex flex-col bg-transparent">
@@ -223,12 +214,13 @@ export default function AdminPanel() {
             <AlertDialogHeader>
             <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Isso excluirá permanentemente a instância.
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente o item.
+                 {itemToDelete?.type === 'user' && " A exclusão do usuário remove apenas o perfil do banco de dados, não a autenticação do Firebase."}
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteInstance}>Confirmar</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete}>Confirmar</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
@@ -239,9 +231,10 @@ export default function AdminPanel() {
       </header>
       <div className="flex-1 p-6 overflow-y-auto">
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-2 bg-[#2a3942] border border-[#1f2c33]">
+          <TabsList className="grid w-full grid-cols-3 bg-[#2a3942] border border-[#1f2c33]">
             <TabsTrigger value="users" className="data-[state=active]:bg-[#111b21] data-[state=active]:text-white">Gerenciamento de Usuários</TabsTrigger>
             <TabsTrigger value="instances" className="data-[state=active]:bg-[#111b21] data-[state=active]:text-white">Gerenciamento de Instâncias</TabsTrigger>
+            <TabsTrigger value="webhook-logs" className="data-[state=active]:bg-[#111b21] data-[state=active]:text-white">Logs do Webhook</TabsTrigger>
           </TabsList>
           <TabsContent value="users">
             <Card className="bg-[#111b21] border-[#1f2c33]">
@@ -286,7 +279,7 @@ export default function AdminPanel() {
                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" onClick={() => { setSelectedUser(user); setIsUserFormOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => handleDeleteUser(user.id)}>
+                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => openDeleteDialog(user.id, 'user')}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -353,7 +346,7 @@ export default function AdminPanel() {
                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" onClick={() => { setSelectedInstance(instance); setIsInstanceFormOpen(true); }}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => openDeleteDialog(instance.id)}>
+                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => openDeleteDialog(instance.id, 'instance')}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -368,6 +361,9 @@ export default function AdminPanel() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+           <TabsContent value="webhook-logs">
+            <WebhookLogs />
           </TabsContent>
         </Tabs>
       </div>
