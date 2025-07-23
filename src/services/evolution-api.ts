@@ -128,18 +128,24 @@ export async function sendTextMessage(instanceId: string, number: string, text: 
       }),
       cache: 'no-store',
     });
-
-    const responseData = await response.json();
+    
+    // Tenta ler o corpo da resposta independentemente do status
+    const responseData = await response.json().catch(() => response.text());
 
     if (!response.ok) {
       console.error('API Error Response:', responseData);
-      const errorMessage = responseData.message || responseData.error || (responseData.response && responseData.response.message) || `Erro ${response.status}`;
+      // Tenta extrair a mensagem de erro de várias estruturas possíveis
+      const errorMessage = 
+          (typeof responseData === 'object' && responseData !== null)
+              ? responseData.message || responseData.error || (responseData.response && responseData.response.message) || JSON.stringify(responseData)
+              : responseData; // se for texto, usa o texto
       throw new Error(`Falha ao enviar mensagem: ${errorMessage}`);
     }
 
     return responseData;
   } catch (error) {
     console.error('Erro na chamada da API da Evolution para enviar texto:', error);
+    // Re-lança o erro para que a Server Action possa capturá-lo
     throw error;
   }
 }
