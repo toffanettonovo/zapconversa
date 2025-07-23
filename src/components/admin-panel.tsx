@@ -15,6 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_WEB_PREVIEW_URL) {
+    return process.env.NEXT_PUBLIC_WEB_PREVIEW_URL;
+  }
   if (typeof window !== 'undefined') {
     return window.location.origin;
   }
