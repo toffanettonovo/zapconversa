@@ -1,4 +1,4 @@
-// src/app/api/webhook/evolution/[instanceId]/route.ts
+// src/app/api/webhook/[instanceId]/route.ts
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -11,45 +11,46 @@ type RouteContext = {
 
 export async function POST(request: Request, context: RouteContext) {
   const { instanceId } = context.params;
-  
-  // First, get the raw text of the body to avoid JSON parsing errors
-  const rawBody = await request.text();
+  let rawBody: string | undefined;
 
   try {
-    // Now, try to parse it as JSON. If it fails, we'll log the raw text.
+    // Attempt to get the raw body text. This itself can fail.
+    rawBody = await request.text();
     let body;
+
     try {
+      // Try to parse it as JSON.
       body = JSON.parse(rawBody);
     } catch (e) {
       // If parsing fails, we log the raw text and a parsing error message.
+      // This is a "controlled" failure, we still received something.
       await addDoc(collection(db, 'webhook_logs'), {
         instanceId: instanceId,
         payload: {
-          error: "Failed to parse JSON body.",
+          error: "Corpo recebido não é um JSON válido.",
           rawBody: rawBody,
         },
         receivedAt: serverTimestamp(),
         isError: true,
       });
-      // Still return a 200 OK so the webhook service doesn't keep retrying.
+      // Return a 200 OK so the webhook service doesn't keep retrying.
       return NextResponse.json({ status: 'ok', message: `Webhook para ${instanceId} recebido com corpo não-JSON.` });
     }
 
-    console.log(`Webhook recebido para a instância ${instanceId}:`, JSON.stringify(body, null, 2));
-
-    // Salva o log do webhook no Firestore
+    // If parsing was successful, log the payload.
     await addDoc(collection(db, 'webhook_logs'), {
       instanceId: instanceId,
       payload: body,
       receivedAt: serverTimestamp(),
     });
 
-
     return NextResponse.json({ status: 'ok', message: `Webhook para ${instanceId} recebido com sucesso` });
+
   } catch (error: unknown) {
-    console.error(`Erro ao processar webhook para ${instanceId}:`, error);
-    
-    let errorPayload: any = { message: 'An unknown error occurred.' };
+    // This is the critical catch block. It will catch errors from request.text()
+    // or any other unexpected issue.
+    let errorPayload: any = { message: 'Ocorreu um erro desconhecido ao processar o webhook.' };
+
     if (error instanceof Error) {
         errorPayload = { 
             message: error.message, 
@@ -57,23 +58,30 @@ export async function POST(request: Request, context: RouteContext) {
             name: error.name,
         };
     } else {
-        errorPayload.details = error;
+        errorPayload.details = String(error);
     }
     
-    // Fallback to log any other unexpected errors
+    // Attempt to log this critical failure to Firestore
     try {
         await addDoc(collection(db, 'webhook_logs'), {
             instanceId: instanceId,
-            payload: { error: errorPayload, rawBody: rawBody }, // Include rawBody here too
+            payload: { 
+              error: errorPayload, 
+              // Include the raw body if we managed to read it before the error.
+              rawBody: rawBody ?? "Não foi possível ler o corpo da requisição.",
+            },
             receivedAt: serverTimestamp(),
             isError: true,
         });
     } catch (dbError) {
-        console.error('Falha ao salvar o log de erro no Firestore:', dbError);
+        // If even logging to Firestore fails, log to the server console.
+        console.error('FALHA CRÍTICA: Não foi possível salvar o log de erro do webhook no Firestore:', dbError);
+        console.error('Erro original do Webhook:', error);
     }
     
-    return new Response('Erro ao processar o webhook.', {
-      status: 400,
+    // Respond with an error status, as something went fundamentally wrong.
+    return new Response('Erro interno ao processar o webhook.', {
+      status: 500,
     });
   }
 }
