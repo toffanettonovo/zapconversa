@@ -11,7 +11,7 @@ import { db, auth } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { UserForm } from './user-form';
 import { InstanceForm } from './instance-form';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from './ui/use-toast';
 
 function getBaseUrl() {
   if (typeof window !== 'undefined') {
@@ -100,7 +100,7 @@ export default function AdminPanel() {
   };
   
   const handleDeleteUser = async (userId: string) => {
-     if (window.confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) {
+    if (window.confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) {
       try {
         // Note: This only deletes from Firestore, not from Firebase Auth.
         // Deleting from Auth is a protected action that typically requires a backend function.
@@ -108,7 +108,7 @@ export default function AdminPanel() {
         toast({ title: "Sucesso", description: "Usuário excluído do banco de dados." });
       } catch (error: any) {
         console.error("Error deleting user: ", error);
-         toast({
+        toast({
           title: "Erro ao excluir usuário",
           description: error.message,
           variant: "destructive",
