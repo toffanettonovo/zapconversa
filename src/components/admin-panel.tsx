@@ -77,27 +77,45 @@ export default function AdminPanel() {
   }, [toast]);
   
   const handleTestWebhook = async (instanceId: string) => {
+    const instance = instances.find(inst => inst.id === instanceId);
+    if (!instance || !instance.webhookUrl) {
+      toast({
+        title: 'URL do Webhook não configurada',
+        description: 'Por favor, edite a instância e defina uma URL de webhook (ngrok) válida.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsTestingWebhook(instanceId);
     try {
-      const response = await fetch(`/api/webhook/${instanceId}`, {
+      const response = await fetch(instance.webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
+        body: JSON.stringify([{
           event: `testFromInstanceButton-${instanceId}`,
-          data: { message: `Este é um teste do painel de administração.` },
-        }),
+          data: { message: `Este é um teste do painel de administração para a instância ${instance.name}.` },
+          instance: instance.name
+        }]),
       });
-      const result = await response.json();
+
       if (!response.ok) {
-        throw new Error(result.message || 'Falha na resposta do servidor');
+        let errorBody = 'Falha ao ler o corpo do erro.';
+        try {
+            errorBody = await response.text();
+        } catch {}
+        throw new Error(`O servidor respondeu com status ${response.status}. Detalhes: ${errorBody}`);
       }
+
+      const result = await response.json();
       toast({
         title: 'Teste de Webhook Enviado',
-        description: `Resposta: ${JSON.stringify(result)}`,
+        description: `Webhook enviado para ${instance.webhookUrl}. Resposta: ${JSON.stringify(result)}`,
       });
     } catch (error: any) {
+      console.error(error);
       toast({
         title: 'Erro ao Testar Webhook',
         description: error.message,
@@ -179,29 +197,23 @@ export default function AdminPanel() {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleSaveInstance = async (instanceData: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity' | 'webhookUrl'> & { id?: string }) => {
+  const handleSaveInstance = async (instanceData: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity'> & { id?: string }) => {
     try {
-      const baseUrl = getBaseUrl();
       if (instanceData.id) { // Editing
         const instanceRef = doc(db, 'instances', instanceData.id);
         const { id, ...updateData } = instanceData;
-        const webhookUrl = `${baseUrl}/api/webhook/${id}`;
         await updateDoc(instanceRef, {
           ...updateData,
-          webhookUrl,
           updatedAt: serverTimestamp(),
         });
         toast({ title: "Sucesso", description: "Instância atualizada." });
       } else { // Creating
-        const newDocRef = await addDoc(collection(db, 'instances'), {
+        await addDoc(collection(db, 'instances'), {
           ...instanceData,
           lastActivity: serverTimestamp(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-          webhookUrl: '', // Placeholder
         });
-         const webhookUrl = `${baseUrl}/api/webhook/${newDocRef.id}`;
-         await updateDoc(newDocRef, { webhookUrl });
         toast({ title: "Sucesso", description: "Instância criada." });
       }
       setIsInstanceFormOpen(false);
@@ -265,7 +277,7 @@ export default function AdminPanel() {
         <h2 className="text-xl font-semibold text-white">Painel do Administrador</h2>
       </header>
       <div className="flex-1 p-6 overflow-y-auto">
-        <Tabs defaultValue="users">
+        <Tabs defaultValue="instances">
           <TabsList className="grid w-full grid-cols-3 bg-[#2a3942] border border-[#1f2c33]">
             <TabsTrigger value="users" className="data-[state=active]:bg-[#111b21] data-[state=active]:text-white">Gerenciamento de Usuários</TabsTrigger>
             <TabsTrigger value="instances" className="data-[state=active]:bg-[#111b21] data-[state=active]:text-white">Gerenciamento de Instâncias</TabsTrigger>
