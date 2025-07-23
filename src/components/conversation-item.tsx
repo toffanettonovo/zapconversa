@@ -20,7 +20,7 @@ export default function ConversationItem({ conversation, isSelected, onSelect }:
   return (
     <div
       className={cn("flex items-start gap-3 p-3 border-b border-[#1f2c33] cursor-pointer transition-colors relative",
-        isSelected ? 'bg-[#2a3942]' : 'hover:bg-[#1f2c33]'
+        isSelected ? 'bg-[#363c3e]' : 'hover:bg-[#1f2c33]'
       )}
       onClick={onSelect}
     >
