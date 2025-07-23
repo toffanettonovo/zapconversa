@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { Conversation } from '@/lib/data';
 import { cn } from '@/lib/utils';
-import { ImageIcon, Mic, Settings, FileText } from 'lucide-react';
+import { ImageIcon, Mic, Settings, FileText, Smile } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 type ConversationItemProps = {
@@ -41,6 +41,7 @@ const getIconForLastMessage = (conversation: Conversation) => {
     if (conversation.lastMessage.toLowerCase().includes('foto')) return <ImageIcon className="h-4 w-4 mr-1 text-gray-400" />;
     if (conversation.lastMessage.toLowerCase().includes('áudio')) return <Mic className="h-4 w-4 mr-1 text-gray-400" />;
     if (conversation.lastMessage.toLowerCase().startsWith('documento:')) return <FileText className="h-4 w-4 mr-1 text-gray-400" />;
+    if (conversation.lastMessage.toLowerCase().includes('figurinha')) return <Smile className="h-4 w-4 mr-1 text-gray-400" />;
     return null;
 }
 

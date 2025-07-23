@@ -60,7 +60,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
     messageText = messageData.videoMessage.caption || 'Vídeo';
     messageType = 'video';
   } else if (messageData.stickerMessage) {
-    messageText = 'Figurinha';
+    messageText = '';
     messageType = 'sticker';
   }
 
