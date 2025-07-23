@@ -18,8 +18,10 @@ export type Conversation = {
 export type User = {
   id: string;
   name: string;
+  email: string;
   role: 'admin' | 'user';
   instance: string;
+  avatar?: string;
 };
 
 export type Instance = {
@@ -95,6 +97,7 @@ export const messages: Record<string, Message[]> = {
 export const currentUser = {
   id: 'user-1',
   name: 'Admin Sistema',
+  email: 'admin@sistema.com',
   avatar: 'https://placehold.co/40x40.png',
   role: 'admin',
   instance: 'Sistema',

@@ -15,22 +15,34 @@ import { type User } from '@/lib/data';
 
 const formSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório.'),
+  email: z.string().email('O e-mail é inválido.'),
+  password: z.string().optional(),
   role: z.enum(['admin', 'user']),
   instance: z.string().min(1, 'A instância é obrigatória.'),
-});
+}).refine(data => {
+    // Se não há 'id' (ou seja, é um novo usuário), a senha é obrigatória.
+    // Esta lógica é uma aproximação. A verificação real se o usuário é novo ou não
+    // será feita fora do formulário, com base na prop 'user'.
+    return true; 
+}, {});
+
 
 type UserFormProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (user: Omit<User, 'id'> | User) => void;
+  onSave: (data: any) => void;
   user?: User;
 };
 
 export function UserForm({ isOpen, onOpenChange, onSave, user }: UserFormProps) {
+  const isEditing = !!user;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: user || {
       name: '',
+      email: '',
+      password: '',
       role: 'user',
       instance: '',
     },
@@ -39,13 +51,19 @@ export function UserForm({ isOpen, onOpenChange, onSave, user }: UserFormProps) 
   useEffect(() => {
     form.reset(user || {
         name: '',
+        email: '',
+        password: '',
         role: 'user',
         instance: '',
       });
-  }, [user, form]);
+  }, [user, form, isOpen]);
 
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (!isEditing && !values.password) {
+        form.setError("password", { type: "manual", message: "A senha é obrigatória para novos usuários." });
+        return;
+    }
     onSave(user ? { ...user, ...values } : values);
   };
 
@@ -73,6 +91,34 @@ export function UserForm({ isOpen, onOpenChange, onSave, user }: UserFormProps) 
                 </FormItem>
               )}
             />
+             <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <Label htmlFor="email">Email</Label>
+                   <FormControl>
+                        <Input id="email" type="email" {...field} className="bg-[#2a3942] border-none" disabled={isEditing} />
+                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {!isEditing && (
+                 <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Label htmlFor="password">Senha</Label>
+                       <FormControl>
+                            <Input id="password" type="password" {...field} className="bg-[#2a3942] border-none" />
+                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            )}
             <FormField
                 control={form.control}
                 name="role"

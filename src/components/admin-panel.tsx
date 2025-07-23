@@ -6,10 +6,12 @@ import { type User, type Instance } from '@/lib/data';
 import { Badge } from './ui/badge';
 import { Circle, Loader2, PlusCircle, Trash2, Edit } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, QuerySnapshot, DocumentData, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, onSnapshot, QuerySnapshot, DocumentData, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { UserForm } from './user-form';
 import { InstanceForm } from './instance-form';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
@@ -21,6 +23,7 @@ export default function AdminPanel() {
   const [isInstanceFormOpen, setIsInstanceFormOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | undefined>(undefined);
   const [selectedInstance, setSelectedInstance] = useState<Instance | undefined>(undefined);
+  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), 
@@ -53,28 +56,52 @@ export default function AdminPanel() {
     };
   }, []);
 
-  const handleSaveUser = async (user: Omit<User, 'id'> | User) => {
+  const handleSaveUser = async (userData: Omit<User, 'id' | 'avatar'> & { password?: string }) => {
     try {
-      if ('id' in user) {
-        const userRef = doc(db, 'users', user.id);
-        const { id, ...userData } = user;
-        await updateDoc(userRef, userData);
-      } else {
-        await addDoc(collection(db, 'users'), user);
+      if (userData.id) { // Editing an existing user
+        const userRef = doc(db, 'users', userData.id);
+        const { id, password, ...updateData } = userData; // Don't save password field
+        await updateDoc(userRef, updateData as any);
+         toast({ title: "Sucesso", description: "Usuário atualizado." });
+      } else { // Creating a new user
+        if (!userData.password || !userData.email) {
+            throw new Error("Email e senha são obrigatórios para novos usuários.");
+        }
+        // Step 1: Create user in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+        const newAuthUser = userCredential.user;
+
+        // Step 2: Create user document in Firestore with the UID from Auth
+        const { password, ...firestoreData } = userData;
+        await setDoc(doc(db, "users", newAuthUser.uid), firestoreData);
+        toast({ title: "Sucesso", description: "Usuário criado com sucesso." });
       }
       setIsUserFormOpen(false);
-    } catch (error) {
+      setSelectedUser(undefined);
+    } catch (error: any) {
       console.error("Error saving user: ", error);
-      // You can add a toast notification here to inform the user
+       toast({
+        title: "Erro ao salvar usuário",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
     }
   };
   
   const handleDeleteUser = async (userId: string) => {
-     if (window.confirm('Tem certeza que deseja excluir este usuário?')) {
+     if (window.confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) {
       try {
+        // Note: This only deletes from Firestore, not from Firebase Auth.
+        // Deleting from Auth is a protected action that typically requires a backend function.
         await deleteDoc(doc(db, 'users', userId));
-      } catch (error) {
+        toast({ title: "Sucesso", description: "Usuário excluído do banco de dados." });
+      } catch (error: any) {
         console.error("Error deleting user: ", error);
+         toast({
+          title: "Erro ao excluir usuário",
+          description: error.message,
+          variant: "destructive",
+        });
       }
     }
   };
@@ -109,7 +136,10 @@ export default function AdminPanel() {
     <div className="flex-1 flex flex-col bg-transparent">
        <UserForm 
         isOpen={isUserFormOpen} 
-        onOpenChange={setIsUserFormOpen}
+        onOpenChange={(isOpen) => {
+            setIsUserFormOpen(isOpen);
+            if (!isOpen) setSelectedUser(undefined);
+        }}
         onSave={handleSaveUser}
         user={selectedUser}
       />
@@ -151,6 +181,7 @@ export default function AdminPanel() {
                   <TableHeader>
                     <TableRow className="border-[#1f2c33] hover:bg-transparent">
                       <TableHead className="text-gray-400">Nome</TableHead>
+                      <TableHead className="text-gray-400">Email</TableHead>
                       <TableHead className="text-gray-400">Função</TableHead>
                       <TableHead className="text-gray-400">Instância</TableHead>
                       <TableHead className="text-right text-gray-400">Ações</TableHead>
@@ -160,6 +191,7 @@ export default function AdminPanel() {
                     {users.length > 0 ? users.map((user) => (
                       <TableRow key={user.id} className="border-[#1f2c33] hover:bg-[#1f2c33]">
                         <TableCell className="font-medium text-white">{user.name}</TableCell>
+                        <TableCell className="text-gray-300">{user.email}</TableCell>
                         <TableCell>
                           <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className={user.role === 'admin' ? 'bg-[#00a884] text-white' : 'bg-gray-600 text-gray-200'}>
                             {user.role}
@@ -177,7 +209,7 @@ export default function AdminPanel() {
                       </TableRow>
                     )) : (
                       <TableRow className="border-[#1f2c33] hover:bg-transparent">
-                        <TableCell colSpan={4} className="text-center h-24 text-gray-400">Nenhum usuário encontrado.</TableCell>
+                        <TableCell colSpan={5} className="text-center h-24 text-gray-400">Nenhum usuário encontrado.</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
