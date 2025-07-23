@@ -63,7 +63,8 @@ export async function updateProfilePicturesAction() {
         checkedCount++;
         const conversation = { id: docSnap.id, ...docSnap.data() } as Conversation;
 
-        if (conversation.avatar?.includes('placehold.co') && conversation.instanceId && conversation.id) {
+        // Tenta atualizar se o avatar não existir ou se for um placeholder
+        if ((!conversation.avatar || conversation.avatar.includes('placehold.co')) && conversation.instanceId && conversation.id) {
             const promise = getProfilePicUrl(conversation.instanceId, conversation.id)
                 .then(newAvatarUrl => {
                     if (newAvatarUrl) {
