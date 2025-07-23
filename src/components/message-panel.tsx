@@ -15,6 +15,10 @@ type MessagePanelProps = {
 };
 
 export default function MessagePanel({ conversation }: MessagePanelProps) {
+  if (conversation?.id === 'admin') {
+    return <AdminPanel />;
+  }
+  
   if (!conversation) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-[#0b141a] text-center text-gray-400 border-t-8 border-[#25d366]">
@@ -26,10 +30,6 @@ export default function MessagePanel({ conversation }: MessagePanelProps) {
         <div className="mt-8 border-t border-gray-700 w-full"></div>
       </div>
     );
-  }
-
-  if (conversation.id === 'admin') {
-    return <AdminPanel />;
   }
 
   const conversationMessages = allMessages[conversation.id] || [];

@@ -7,10 +7,12 @@ import { conversations } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 export default function ChatLayout() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const { user } = useAuth();
+  const router = useRouter();
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
   
@@ -30,6 +32,14 @@ export default function ChatLayout() {
     instance: 'Sistema'
   };
 
+  const handleAdminClick = () => {
+    setSelectedConversationId('admin');
+  };
+
+  const handleSettingsClick = () => {
+    // Placeholder for settings navigation
+    console.log('Settings clicked');
+  };
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0b141a]">
@@ -51,8 +61,8 @@ export default function ChatLayout() {
                 </div>
             </div>
             <div className="flex items-center gap-4 text-sm">
-                <Button variant="link" className="text-gray-300 hover:text-white p-0 h-auto">Admin Sistema</Button>
-                <Button variant="link" className="text-gray-300 hover:text-white p-0 h-auto">Configurações</Button>
+                <Button variant="link" onClick={handleAdminClick} className="text-gray-300 hover:text-white p-0 h-auto">Admin Sistema</Button>
+                <Button variant="link" onClick={handleSettingsClick} className="text-gray-300 hover:text-white p-0 h-auto">Configurações</Button>
             </div>
         </header>
         <div className="flex flex-1 overflow-hidden">

@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { Conversation } from '@/lib/data';
 import { cn } from '@/lib/utils';
-import { ImageIcon, Mic } from 'lucide-react';
+import { ImageIcon, Mic, Settings } from 'lucide-react';
 
 type ConversationItemProps = {
   conversation: Conversation;
@@ -10,9 +10,10 @@ type ConversationItemProps = {
   onSelect: () => void;
 };
 
-const getIconForLastMessage = (message: string) => {
-    if (message.toLowerCase().includes('foto')) return <ImageIcon className="h-4 w-4 mr-1 text-gray-400" />;
-    if (message.toLowerCase().includes('áudio')) return <Mic className="h-4 w-4 mr-1 text-gray-400" />;
+const getIconForLastMessage = (conversation: Conversation) => {
+    if (conversation.id === 'admin') return <Settings className="h-4 w-4 mr-1 text-gray-400" />;
+    if (conversation.lastMessage.toLowerCase().includes('foto')) return <ImageIcon className="h-4 w-4 mr-1 text-gray-400" />;
+    if (conversation.lastMessage.toLowerCase().includes('áudio')) return <Mic className="h-4 w-4 mr-1 text-gray-400" />;
     return null;
 }
 
@@ -41,7 +42,7 @@ export default function ConversationItem({ conversation, isSelected, onSelect }:
         </div>
         <div className="flex justify-between items-center mt-1">
           <div className="text-sm truncate max-w-[80%] flex items-center">
-            {getIconForLastMessage(conversation.lastMessage)}
+            {getIconForLastMessage(conversation)}
             <span className={cn(isSelected ? 'text-white/90' : 'text-gray-400')}>{conversation.lastMessage}</span>
           </div>
           {conversation.unreadCount != null && conversation.unreadCount > 0 && !isSelected && (

@@ -24,6 +24,14 @@ export type User = {
 
 export const conversations: Conversation[] = [
   {
+    id: 'admin',
+    name: 'Painel do Administrador',
+    avatar: 'https://placehold.co/40x40.png',
+    lastMessage: 'Gerenciar usuários e instâncias',
+    timestamp: '',
+    "data-ai-hint": "gear settings",
+  },
+  {
     id: '1',
     name: '5511931996806 (WhatsApp)',
     avatar: 'https://placehold.co/40x40.png',
