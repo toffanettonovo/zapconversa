@@ -121,7 +121,7 @@ export async function sendTextMessage(instanceId: string, number: string, text: 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        number: number.split('@')[0], // Garante que estamos enviando apenas o número
+        number: number.split('@')[0],
         textMessage: {
           text: text,
         },
