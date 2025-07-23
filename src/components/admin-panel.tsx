@@ -11,7 +11,7 @@ import { db, auth } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { UserForm } from './user-form';
 import { InstanceForm } from './instance-form';
-import { useToast } from './ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 function getBaseUrl() {
   if (typeof window !== 'undefined') {
