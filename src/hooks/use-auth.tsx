@@ -28,16 +28,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUser(user);
-      } else {
-        router.push('/login');
-      }
+      setUser(user);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, []);
+  
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [loading, user, router]);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
