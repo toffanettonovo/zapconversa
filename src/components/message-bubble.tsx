@@ -105,8 +105,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         </div>
         {message.reaction && (
           <div className={cn(
-            "absolute -bottom-2 text-xs rounded-full bg-[#202c33] p-1 border-2 border-[#0b141a]",
-            isMine ? "-right-2" : "-left-2"
+            "absolute -bottom-2 -right-2 text-xs rounded-full bg-[#202c33] p-1 border-2 border-[#0b141a]"
           )}>
             {message.reaction}
           </div>
