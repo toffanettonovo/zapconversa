@@ -20,10 +20,12 @@ export default function AdminPanel() {
           </TabsList>
           <TabsContent value="users">
             <Card>
-              <CardHeader>
-                <CardTitle>Usuários</CardTitle>
-                <CardDescription>Crie, edite e gerencie os usuários do sistema.</CardDescription>
-                <Button className="absolute top-6 right-6">
+              <CardHeader className="flex flex-row justify-between items-start">
+                <div>
+                  <CardTitle>Usuários</CardTitle>
+                  <CardDescription>Crie, edite e gerencie os usuários do sistema.</CardDescription>
+                </div>
+                <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Criar Usuário
                 </Button>
@@ -60,10 +62,12 @@ export default function AdminPanel() {
           </TabsContent>
           <TabsContent value="instances">
             <Card>
-              <CardHeader>
-                <CardTitle>Instâncias</CardTitle>
-                <CardDescription>Configure instâncias da Evolution API.</CardDescription>
-                 <Button className="absolute top-6 right-6">
+              <CardHeader className="flex flex-row justify-between items-start">
+                <div>
+                  <CardTitle>Instâncias</CardTitle>
+                  <CardDescription>Configure instâncias da Evolution API.</CardDescription>
+                </div>
+                 <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Adicionar Instância
                 </Button>
