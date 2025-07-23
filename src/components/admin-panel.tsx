@@ -197,6 +197,7 @@ export default function AdminPanel() {
         }}
         onSave={handleSaveUser}
         user={selectedUser}
+        instances={instances}
       />
       <InstanceForm
         isOpen={isInstanceFormOpen}
@@ -256,7 +257,7 @@ export default function AdminPanel() {
                       <TableHead className="text-gray-400">Nome</TableHead>
                       <TableHead className="text-gray-400">Email</TableHead>
                       <TableHead className="text-gray-400">Função</TableHead>
-                      <TableHead className="text-gray-400">ID da Instância</TableHead>
+                      <TableHead className="text-gray-400">Instâncias</TableHead>
                       <TableHead className="text-right text-gray-400">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -270,7 +271,7 @@ export default function AdminPanel() {
                             {user.role}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-gray-300">{user.instanceId}</TableCell>
+                        <TableCell className="text-gray-300">{user.instanceIds?.join(', ')}</TableCell>
                         <TableCell className="text-right">
                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" onClick={() => { setSelectedUser(user); setIsUserFormOpen(true); }}>
                             <Edit className="h-4 w-4" />

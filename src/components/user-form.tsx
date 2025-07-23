@@ -10,15 +10,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { type User } from '@/lib/data';
+import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
+import { type User, type Instance } from '@/lib/data';
+import { Checkbox } from './ui/checkbox';
+import { ScrollArea } from './ui/scroll-area';
 
 const formSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório.'),
   email: z.string().email('O e-mail é inválido.'),
   password: z.string().optional(),
   role: z.enum(['admin', 'user']),
-  instanceId: z.string().min(1, 'A associação com uma instância é obrigatória.'),
+  instanceIds: z.array(z.string()).refine((value) => value.some((item) => item), {
+    message: "Você precisa selecionar pelo menos uma instância.",
+  }),
 }).refine(data => {
     return true; 
 }, {});
@@ -29,29 +33,30 @@ type UserFormProps = {
   onOpenChange: (isOpen: boolean) => void;
   onSave: (data: any) => void;
   user?: User;
+  instances: Instance[];
 };
 
-export function UserForm({ isOpen, onOpenChange, onSave, user }: UserFormProps) {
+export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: UserFormProps) {
   const isEditing = !!user;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: user || {
+    defaultValues: user ? { ...user } : {
       name: '',
       email: '',
       password: '',
       role: 'user',
-      instanceId: '',
+      instanceIds: [],
     },
   });
   
   useEffect(() => {
-    form.reset(user || {
+    form.reset(user ? { ...user, password: '' } : {
         name: '',
         email: '',
         password: '',
         role: 'user',
-        instanceId: '',
+        instanceIds: [],
       });
   }, [user, form, isOpen]);
 
@@ -137,19 +142,56 @@ export function UserForm({ isOpen, onOpenChange, onSave, user }: UserFormProps) 
                     </FormItem>
                 )}
             />
-             <FormField
+            <FormField
                 control={form.control}
-                name="instanceId"
-                render={({ field }) => (
+                name="instanceIds"
+                render={() => (
                     <FormItem>
-                        <Label htmlFor="instanceId">ID da Instância Associada</Label>
-                         <FormControl>
-                            <Input id="instanceId" {...field} placeholder="Cole aqui o ID da instância" className="bg-[#2a3942] border-none" />
-                         </FormControl>
-                        <FormMessage />
+                    <div className="mb-4">
+                        <FormLabel className="text-base">Instâncias Associadas</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                        Selecione as instâncias que este usuário terá acesso.
+                        </p>
+                    </div>
+                    <ScrollArea className="h-32 w-full rounded-md border border-[#2a3942] p-4">
+                    {instances.map((instance) => (
+                        <FormField
+                        key={instance.id}
+                        control={form.control}
+                        name="instanceIds"
+                        render={({ field }) => {
+                            return (
+                            <FormItem
+                                key={instance.id}
+                                className="flex flex-row items-start space-x-3 space-y-0"
+                            >
+                                <FormControl>
+                                <Checkbox
+                                    checked={field.value?.includes(instance.id)}
+                                    onCheckedChange={(checked) => {
+                                    return checked
+                                        ? field.onChange([...(field.value || []), instance.id])
+                                        : field.onChange(
+                                            field.value?.filter(
+                                            (value) => value !== instance.id
+                                            )
+                                        );
+                                    }}
+                                />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                {instance.name}
+                                </FormLabel>
+                            </FormItem>
+                            );
+                        }}
+                        />
+                    ))}
+                    </ScrollArea>
+                    <FormMessage />
                     </FormItem>
                 )}
-             />
+            />
              <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" className="hover:bg-[#2a3942]" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button type="submit" className="bg-[#00a884] hover:bg-[#008f71]">Salvar</Button>

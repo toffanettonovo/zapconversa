@@ -20,7 +20,7 @@ export type User = {
   name: string;
   email: string;
   role: 'admin' | 'user';
-  instanceId: string;
+  instanceIds: string[];
   avatar?: string;
 };
 
