@@ -75,10 +75,12 @@ export default function AdminPanel() {
       });
       return;
     }
+    
+    const finalWebhookUrl = `${instance.webhookUrl}/api/webhook/${instance.id}`;
 
     setIsTestingWebhook(instanceId);
     try {
-      const response = await fetch(instance.webhookUrl, {
+      const response = await fetch(finalWebhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +103,7 @@ export default function AdminPanel() {
       const result = await response.json();
       toast({
         title: 'Teste de Webhook Enviado',
-        description: `Webhook enviado para ${instance.webhookUrl}. Resposta: ${JSON.stringify(result)}`,
+        description: `Webhook enviado para ${finalWebhookUrl}. Resposta: ${JSON.stringify(result)}`,
       });
     } catch (error: any) {
       console.error(error);
@@ -217,10 +219,12 @@ export default function AdminPanel() {
     }
   };
   
-  const handleCopyWebhook = (url: string) => {
-    if (url) {
-      navigator.clipboard.writeText(url);
-      toast({ title: 'Copiado!', description: 'URL do Webhook copiada para a área de transferência.' });
+  const handleCopyWebhook = (id: string) => {
+    const instance = instances.find(inst => inst.id === id);
+    if (instance && instance.webhookUrl) {
+      const finalUrl = `${instance.webhookUrl}/api/webhook/${instance.id}`;
+      navigator.clipboard.writeText(finalUrl);
+      toast({ title: 'Copiado!', description: 'URL final do Webhook copiada para a área de transferência.' });
     }
   };
 
@@ -354,7 +358,7 @@ export default function AdminPanel() {
                     <TableRow className="border-[#1f2c33] hover:bg-transparent">
                       <TableHead className="text-gray-400">Nome</TableHead>
                       <TableHead className="text-gray-400">URL da API</TableHead>
-                      <TableHead className="text-gray-400">Webhook</TableHead>
+                      <TableHead className="text-gray-400">Webhook Host</TableHead>
                       <TableHead className="text-gray-400">Status</TableHead>
                       <TableHead className="text-right text-gray-400">Ações</TableHead>
                     </TableRow>
@@ -367,7 +371,7 @@ export default function AdminPanel() {
                         <TableCell className="text-gray-300 text-xs">
                           <div className="flex items-center gap-2">
                              <span>{instance.webhookUrl}</span>
-                             <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white" onClick={() => handleCopyWebhook(instance.webhookUrl)}>
+                             <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white" onClick={() => handleCopyWebhook(instance.id)}>
                                 <Copy className="h-3 w-3" />
                              </Button>
                           </div>
