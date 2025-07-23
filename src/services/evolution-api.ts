@@ -133,7 +133,7 @@ export async function sendTextMessage(instanceId: string, number: string, text: 
 
     if (!response.ok) {
       console.error('API Error Response:', responseData);
-      const errorMessage = responseData.message || responseData.error || `Erro ${response.status}`;
+      const errorMessage = responseData.message || responseData.error || (responseData.response && responseData.response.message) || `Erro ${response.status}`;
       throw new Error(`Falha ao enviar mensagem: ${errorMessage}`);
     }
 
