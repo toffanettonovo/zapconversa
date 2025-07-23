@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { type User, type Instance } from '@/lib/data';
 import { Badge } from './ui/badge';
-import { Circle, Loader2, PlusCircle, Trash2, Edit } from 'lucide-react';
+import { Circle, Loader2, PlusCircle, Trash2, Edit, Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, QuerySnapshot, DocumentData, addDoc, updateDoc, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -178,6 +178,13 @@ export default function AdminPanel() {
     setInstanceToDelete(instanceId);
     setIsDeleteDialogOpen(true);
   };
+  
+  const handleCopyWebhook = (url: string) => {
+    if (url) {
+      navigator.clipboard.writeText(url);
+      toast({ title: 'Copiado!', description: 'URL do Webhook copiada para a área de transferência.' });
+    }
+  };
 
 
   return (
@@ -317,7 +324,14 @@ export default function AdminPanel() {
                       <TableRow key={instance.id} className="border-[#1f2c33] hover:bg-[#1f2c33]">
                         <TableCell className="font-medium text-white">{instance.name}</TableCell>
                         <TableCell className="text-gray-300">{instance.apiUrl}</TableCell>
-                        <TableCell className="text-gray-300 text-xs">{instance.webhookUrl}</TableCell>
+                        <TableCell className="text-gray-300 text-xs">
+                          <div className="flex items-center gap-2">
+                             <span>{instance.webhookUrl}</span>
+                             <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white" onClick={() => handleCopyWebhook(instance.webhookUrl)}>
+                                <Copy className="h-3 w-3" />
+                             </Button>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Badge variant={instance.isActive ? 'default' : 'destructive'} className={`flex items-center gap-2 w-fit ${instance.isActive ? 'bg-green-600' : 'bg-red-600'} text-white`}>
                             <Circle className={`h-2 w-2 ${instance.isActive ? 'fill-green-400' : 'fill-red-400'}`} />
