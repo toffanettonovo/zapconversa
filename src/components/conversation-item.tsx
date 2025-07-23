@@ -20,34 +20,39 @@ export default function ConversationItem({ conversation, isSelected, onSelect }:
   return (
     <div
       className={cn("flex items-start gap-3 p-3 border-b border-[#1f2c33] cursor-pointer transition-colors relative",
-        isSelected ? 'bg-[#363c3e]' : 'hover:bg-[#1f2c33]'
+        isSelected ? 'bg-[#2a3942]' : 'hover:bg-[#1f2c33]'
       )}
       onClick={onSelect}
     >
-      {isSelected && <div className="absolute right-0 top-0 h-full w-px bg-[#01a870]" />}
+      {isSelected && <div className="absolute left-0 top-0 h-full w-1 bg-[#01a870]" />}
       <Avatar className="h-12 w-12">
         <AvatarImage src={conversation.avatar} alt={conversation.name} data-ai-hint={conversation['data-ai-hint']} />
         <AvatarFallback>{conversation.name.charAt(0)}</AvatarFallback>
       </Avatar>
       <div className="flex-1 overflow-hidden">
         <div className="flex justify-between items-center">
-          <h3 className="font-semibold text-white truncate">{conversation.name}</h3>
+          <h3 className={cn("font-semibold truncate", isSelected ? 'text-white' : 'text-gray-300')}>{conversation.name}</h3>
           <span className={cn(
             "text-xs",
-             isSelected ? 'text-white/80' : 'text-gray-400'
+             isSelected ? 'text-white/90' : 'text-gray-400'
           )}>
             {conversation.timestamp}
           </span>
         </div>
         <div className="flex justify-between items-center mt-1">
-          <div className="text-sm text-gray-400 truncate max-w-[80%] flex items-center">
+          <div className="text-sm truncate max-w-[80%] flex items-center">
             {getIconForLastMessage(conversation.lastMessage)}
-            <span className={cn(isSelected ? 'text-white/80' : 'text-gray-400')}>{conversation.lastMessage}</span>
+            <span className={cn(isSelected ? 'text-white/90' : 'text-gray-400')}>{conversation.lastMessage}</span>
           </div>
-          {conversation.unreadCount && conversation.unreadCount > 0 && !isSelected && (
+          {conversation.unreadCount != null && conversation.unreadCount > 0 && !isSelected && (
             <Badge className="bg-[#00a884] text-white h-5 w-5 p-0 flex items-center justify-center text-xs">
               {conversation.unreadCount}
             </Badge>
+          )}
+          {conversation.unreadCount === 0 && isSelected && (
+             <Badge variant="outline" className="h-5 w-5 p-0 flex items-center justify-center text-xs border-gray-500 text-gray-400">
+                0
+             </Badge>
           )}
         </div>
       </div>
