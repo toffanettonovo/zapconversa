@@ -10,8 +10,30 @@ type ConversationItemProps = {
   onSelect: () => void;
 };
 
+function formatTimestamp(timestamp: any): string {
+    if (!timestamp) return '';
+    if (typeof timestamp === 'string') return timestamp;
+    
+    const date = timestamp.toDate ? timestamp.toDate() : new Date();
+    const now = new Date();
+    
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return 'ontem';
+    }
+
+    return date.toLocaleDateString('pt-BR');
+}
+
+
 const getIconForLastMessage = (conversation: Conversation) => {
     if (conversation.id === 'admin') return <Settings className="h-4 w-4 mr-1 text-gray-400" />;
+    if (!conversation.lastMessage) return null;
     if (conversation.lastMessage.toLowerCase().includes('foto')) return <ImageIcon className="h-4 w-4 mr-1 text-gray-400" />;
     if (conversation.lastMessage.toLowerCase().includes('áudio')) return <Mic className="h-4 w-4 mr-1 text-gray-400" />;
     return null;
@@ -37,7 +59,7 @@ export default function ConversationItem({ conversation, isSelected, onSelect }:
             "text-xs",
              isSelected ? 'text-white/90' : 'text-gray-400'
           )}>
-            {conversation.timestamp}
+            {formatTimestamp(conversation.timestamp)}
           </span>
         </div>
         <div className="flex justify-between items-center mt-1">

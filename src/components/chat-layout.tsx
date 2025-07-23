@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import ConversationList from './conversation-list';
 import MessagePanel from './message-panel';
-import { conversations, type User, type Instance } from '@/lib/data';
+import { type Conversation, type User, type Instance } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { Loader2, UserCircle, LogOut, Settings, Shield } from 'lucide-react';
@@ -31,6 +31,8 @@ export default function ChatLayout() {
   const [userData, setUserData] = useState<User | null>(null);
   const [instances, setInstances] = useState<Instance[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string>('all');
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
 
   useEffect(() => {
@@ -65,6 +67,39 @@ export default function ChatLayout() {
     }
   }, [user]);
 
+  useEffect(() => {
+    let unsub: (() => void) | null = null;
+    const fetchConversation = async () => {
+      if (selectedConversationId && selectedConversationId !== 'admin') {
+        const conversationRef = doc(db, 'conversations', selectedConversationId);
+        unsub = onSnapshot(conversationRef, (doc) => {
+          if (doc.exists()) {
+            setSelectedConversation({ id: doc.id, ...doc.data() } as Conversation);
+          }
+        });
+      } else if (selectedConversationId === 'admin') {
+         setSelectedConversation({
+          id: 'admin',
+          name: 'Painel do Administrador',
+          avatar: 'https://placehold.co/40x40.png',
+          lastMessage: 'Gerenciar usuários e instâncias',
+          timestamp: '',
+          "data-ai-hint": "gear settings",
+        });
+      } else {
+        setSelectedConversation(null);
+      }
+    };
+
+    fetchConversation();
+
+    return () => {
+      if (unsub) {
+        unsub();
+      }
+    };
+  }, [selectedConversationId]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -73,9 +108,6 @@ export default function ChatLayout() {
       console.error('Error signing out: ', error);
     }
   };
-
-
-  const selectedConversation = conversations.find(c => c.id === selectedConversationId);
   
   const displayUser = userData ? {
     id: userData.id,
@@ -115,7 +147,7 @@ export default function ChatLayout() {
                 <h1 className="text-lg font-semibold">WhatsApp Business</h1>
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-300">Instância:</span>
-                    <Select defaultValue="all">
+                    <Select value={selectedInstanceId} onValueChange={setSelectedInstanceId}>
                         <SelectTrigger className="bg-[#1f2c33] border-none w-[180px] h-8 text-sm">
                             <SelectValue placeholder="Selecione uma instância" />
                         </SelectTrigger>
@@ -142,7 +174,7 @@ export default function ChatLayout() {
                     <DropdownMenuContent className="w-56" align="end">
                         <DropdownMenuLabel>{displayUser?.email}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={handleAdminClick}>
+                        <DropdownMenuItem onClick={handleAdminClick} disabled={userData?.role !== 'admin'}>
                            <Shield className="mr-2 h-4 w-4" />
                            <span>Admin Sistema</span>
                         </DropdownMenuItem>
@@ -162,13 +194,14 @@ export default function ChatLayout() {
         <div className="flex flex-1 overflow-hidden">
             <div className="w-full max-w-sm lg:max-w-md border-r border-[#1f2c33] flex-none">
                 <ConversationList
-                onSelectConversation={setSelectedConversationId}
-                selectedConversationId={selectedConversationId}
-                currentUser={displayUser}
+                  onSelectConversation={setSelectedConversationId}
+                  selectedConversationId={selectedConversationId}
+                  currentUser={displayUser}
+                  selectedInstanceId={selectedInstanceId}
                 />
             </div>
             <div className="flex-1 flex flex-col">
-                <MessagePanel conversation={selectedConversation} />
+                <MessagePanel conversation={selectedConversation ?? undefined} />
             </div>
         </div>
     </div>

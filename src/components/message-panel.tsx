@@ -2,19 +2,48 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { type Conversation, messages as allMessages } from '@/lib/data';
-import { MoreVertical, Paperclip, Search, SendHorizontal, Smile } from 'lucide-react';
+import { type Conversation, type Message } from '@/lib/data';
+import { MoreVertical, Paperclip, Search, SendHorizontal, Smile, Loader2 } from 'lucide-react';
 import MessageBubble from './message-bubble';
 import SmartReply from './smart-reply';
 import AdminPanel from './admin-panel';
 import ConversationSummary from './conversation-summary';
 import { WhatsappLogo } from './icons';
+import { useState, useEffect } from 'react';
+import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 type MessagePanelProps = {
   conversation: Conversation | undefined;
 };
 
 export default function MessagePanel({ conversation }: MessagePanelProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (conversation?.id && conversation.id !== 'admin') {
+      setLoading(true);
+      const conversationRef = doc(db, 'conversations', conversation.id);
+      const messagesCollectionRef = collection(conversationRef, 'messages');
+      const q = query(messagesCollectionRef, orderBy('timestamp', 'asc'));
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+        setMessages(msgs);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching messages:", error);
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
+    } else {
+        setMessages([]);
+    }
+  }, [conversation]);
+
+
   if (conversation?.id === 'admin') {
     return <AdminPanel />;
   }
@@ -32,8 +61,7 @@ export default function MessagePanel({ conversation }: MessagePanelProps) {
     );
   }
 
-  const conversationMessages = allMessages[conversation.id] || [];
-  const conversationText = conversationMessages.map(m => `${m.sender === 'me' ? 'Eu' : conversation.name}: ${m.text}`).join('\n');
+  const conversationText = messages.map(m => `${m.sender === 'me' ? 'Eu' : conversation.name}: ${m.text}`).join('\n');
 
   return (
     <div className="flex flex-col h-full bg-[#0b141a]">
@@ -59,13 +87,19 @@ export default function MessagePanel({ conversation }: MessagePanelProps) {
         </div>
       </header>
       <ScrollArea className="flex-1 p-4 bg-[#0b141a]">
-        <div className="flex flex-col gap-4">
-          {conversationMessages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
-          ))}
-        </div>
+        {loading ? (
+             <div className="flex justify-center items-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+             </div>
+        ) : (
+             <div className="flex flex-col gap-4">
+                {messages.map((msg) => (
+                    <MessageBubble key={msg.id} message={msg} />
+                ))}
+            </div>
+        )}
       </ScrollArea>
-      <SmartReply messages={conversationMessages} />
+      <SmartReply messages={messages} />
       <footer className="p-3 bg-[#202c33] border-t border-[#1f2c33]">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" className="hover:bg-[#2a3942]">

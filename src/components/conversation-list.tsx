@@ -2,24 +2,69 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { conversations, type User } from '@/lib/data';
+import { type Conversation, type User } from '@/lib/data';
 import { CircleDashed, MessageSquarePlus, MoreVertical, Search, Settings } from 'lucide-react';
 import ConversationItem from './conversation-item';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useState, useEffect } from 'react';
+import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Loader2 } from 'lucide-react';
 
 type ConversationListProps = {
   selectedConversationId: string | null;
   onSelectConversation: (id: string) => void;
-  currentUser: (Pick<User, 'name' | 'role' | 'instanceIds'> & { avatar: string; 'data-ai-hint': string }) | null;
+  currentUser: (Pick<User, 'id' | 'name' | 'role' | 'instanceIds'> & { avatar: string; 'data-ai-hint': string }) | null;
+  selectedInstanceId: string | null;
+};
+
+const adminConversation = {
+    id: 'admin',
+    name: 'Painel do Administrador',
+    avatar: 'https://placehold.co/40x40.png',
+    lastMessage: 'Gerenciar usuários e instâncias',
+    timestamp: '',
+    "data-ai-hint": "gear settings",
 };
 
 export default function ConversationList({
   selectedConversationId,
   onSelectConversation,
   currentUser,
+  selectedInstanceId
 }: ConversationListProps) {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
     
+  useEffect(() => {
+    if (!currentUser) return;
+
+    setLoading(true);
+    const conversationsCollection = collection(db, 'conversations');
+    
+    let q;
+    if (selectedInstanceId && selectedInstanceId !== 'all') {
+        q = query(conversationsCollection, where('instanceId', '==', selectedInstanceId), orderBy('timestamp', 'desc'));
+    } else if (currentUser.role === 'admin') {
+        q = query(conversationsCollection, orderBy('timestamp', 'desc'));
+    } else {
+        q = query(conversationsCollection, where('instanceId', 'in', currentUser.instanceIds || []), orderBy('timestamp', 'desc'));
+    }
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const convos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Conversation);
+      setConversations(convos);
+      setLoading(false);
+    }, (error) => {
+        console.error("Error fetching conversations:", error);
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser, selectedInstanceId]);
+
+
   if (!currentUser) {
     return (
         <div className="flex flex-col h-full bg-[#111b21] text-gray-300 items-center justify-center">
@@ -29,9 +74,8 @@ export default function ConversationList({
   }
 
   const instanceName = currentUser.role === 'admin' ? 'Todas as Instâncias' : 'Instâncias do Usuário';
-
-  // Any authenticated user can see the admin panel conversation now.
-  const availableConversations = conversations;
+  
+  const allConversations = [adminConversation, ...conversations];
 
   return (
     <div className="flex flex-col h-full bg-[#111b21] text-gray-300">
@@ -65,16 +109,22 @@ export default function ConversationList({
         </div>
       </div>
       <ScrollArea className="flex-1">
-        <div className="flex flex-col">
-          {availableConversations.map((convo) => (
-            <ConversationItem
-              key={convo.id}
-              conversation={convo}
-              isSelected={selectedConversationId === convo.id}
-              onSelect={() => onSelectConversation(convo.id)}
-            />
-          ))}
-        </div>
+        {loading ? (
+             <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+             </div>
+        ) : (
+            <div className="flex flex-col">
+            {allConversations.map((convo) => (
+                <ConversationItem
+                key={convo.id}
+                conversation={convo}
+                isSelected={selectedConversationId === convo.id}
+                onSelect={() => onSelectConversation(convo.id)}
+                />
+            ))}
+            </div>
+        )}
       </ScrollArea>
     </div>
   );

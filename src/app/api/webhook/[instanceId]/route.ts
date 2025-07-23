@@ -1,7 +1,7 @@
 // src/app/api/webhook/[instanceId]/route.ts
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc, query, where, getDocs, limit } from 'firebase/firestore';
 
 type RouteContext = {
   params: {
@@ -9,72 +9,109 @@ type RouteContext = {
   };
 };
 
+async function handleMessageUpsert(instanceId: string, data: any) {
+  const messageData = data.message;
+  const key = data.key;
+  
+  if (!messageData || !key || !key.remoteJid) {
+    console.warn('Webhook "messages.upsert" recebido sem dados de mensagem ou chave válidos.', data);
+    return; // Ignora se não for uma mensagem válida
+  }
+  
+  // A "conversa" é com o contato externo.
+  const conversationId = key.remoteJid;
+  const conversationRef = doc(db, 'conversations', conversationId);
+  const messagesCollectionRef = collection(conversationRef, 'messages');
+
+  // Extrai o texto da mensagem (pode estar em `conversation` ou `extendedTextMessage.text`)
+  const messageText = messageData.conversation || messageData.extendedTextMessage?.text || '[Mídia não suportada]';
+
+  // 1. Salvar a nova mensagem na subcoleção
+  await addDoc(messagesCollectionRef, {
+    text: messageText,
+    sender: key.fromMe ? 'me' : 'them',
+    timestamp: serverTimestamp(), // Usar o timestamp do servidor para ordenação
+    messageTimestamp: data.messageTimestamp ? new Date(data.messageTimestamp * 1000) : new Date(), // Timestamp original
+    fromMe: key.fromMe,
+    messageId: key.id,
+    instanceId: instanceId, // Associa a mensagem à instância
+  });
+
+  // 2. Criar ou atualizar o documento da conversa principal
+  const conversationDoc = await getDocs(query(collection(db, 'conversations'), where('id', '==', conversationId), limit(1)));
+
+  if (conversationDoc.empty) {
+    // Se a conversa não existe, cria
+    await setDoc(conversationRef, {
+      id: conversationId,
+      name: data.pushName || conversationId, // Usa o pushName se disponível
+      avatar: 'https://placehold.co/40x40.png',
+      'data-ai-hint': 'person avatar',
+      lastMessage: messageText,
+      timestamp: serverTimestamp(),
+      unreadCount: key.fromMe ? 0 : 1, // Só incrementa se a mensagem não for minha
+      instanceId: instanceId, // Associa a conversa à instância
+    });
+  } else {
+    // Se a conversa já existe, atualiza
+     await updateDoc(conversationRef, {
+      lastMessage: messageText,
+      timestamp: serverTimestamp(),
+      // Aqui teríamos uma lógica para incrementar `unreadCount` se necessário
+    });
+  }
+
+}
+
+
 export async function POST(request: Request, context: RouteContext) {
   const { instanceId } = context.params;
-  let rawBody: string = '';
+  let payload;
 
   try {
-    // Passo 1: Tenta ler o corpo da requisição como texto.
+    const rawBody = await request.text();
+
     try {
-      rawBody = await request.text();
-    } catch (readError: any) {
-      // Se nem mesmo ler o corpo como texto funcionar, registra um erro crítico.
-      console.error('CRITICAL: Failed to read request body.', readError);
+      const parsedData = JSON.parse(rawBody);
+       // O payload pode vir como um array ou um objeto único
+      payload = Array.isArray(parsedData) && parsedData.length > 0 ? parsedData[0] : parsedData;
+    } catch (jsonError) {
+      console.error('Webhook payload is not valid JSON. Raw body:', rawBody);
+      // Ainda salva o log de erro, mas não tenta processar mais
       await addDoc(collection(db, 'webhook_logs'), {
         instanceId: instanceId,
-        payload: {
-          error: "Falha crítica ao ler o corpo da requisição.",
-          details: readError.message,
-          rawBody: "Corpo ilegível",
-        },
+        payload: { error: "Corpo recebido não é um JSON válido.", rawBody: rawBody },
         receivedAt: serverTimestamp(),
         isError: true,
       });
-      return new Response('Error reading request body', { status: 400 });
+      return new Response('Invalid JSON format', { status: 400 });
     }
 
-    // Passo 2: Tenta analisar o texto bruto como JSON.
-    let payload;
-    let isError = false;
-    try {
-      const parsedData = JSON.parse(rawBody);
-      
-      // Verifica se é um array e pega o primeiro elemento, como no exemplo do n8n.
-      if (Array.isArray(parsedData) && parsedData.length > 0) {
-        payload = parsedData[0];
-      } else {
-        payload = parsedData;
-      }
-    } catch (jsonError) {
-      // Se a análise do JSON falhar, registra o corpo bruto como payload.
-      isError = true;
-      payload = {
-        error: "Corpo recebido não é um JSON válido ou está em formato inesperado.",
-        rawBody: rawBody,
-      };
-    }
-
-    // Passo 3: Salva o resultado (seja o JSON analisado ou o erro com o corpo bruto) no Firestore.
+    // Salva o log original (útil para depuração)
     await addDoc(collection(db, 'webhook_logs'), {
       instanceId: instanceId,
       payload: payload,
       receivedAt: serverTimestamp(),
-      isError: isError,
+      isError: false,
     });
 
-    return NextResponse.json({ status: 'ok', message: `Webhook para ${instanceId} recebido com sucesso` });
+    // Processa o evento específico
+    if (payload.event === 'messages.upsert') {
+      await handleMessageUpsert(instanceId, payload.data);
+    }
+    // Outros eventos como 'connection.update' podem ser tratados aqui com 'else if'
+
+    return NextResponse.json({ status: 'ok', message: `Webhook para ${instanceId} processado com sucesso` });
 
   } catch (error: any) {
-    // Captura de erro geral para problemas inesperados durante o processo.
     console.error('FATAL: Unknown error processing webhook.', error);
-    try {
+     try {
         await addDoc(collection(db, 'webhook_logs'), {
             instanceId: instanceId,
             payload: { 
               error: "Erro Fatal no Endpoint do Webhook",
               details: error.message,
               stack: error.stack,
-              rawBodyAttempt: rawBody || "Não foi possível ler o corpo da requisição.",
             },
             receivedAt: serverTimestamp(),
             isError: true,
