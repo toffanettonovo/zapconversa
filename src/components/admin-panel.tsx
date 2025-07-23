@@ -6,7 +6,7 @@ import { type User, type Instance } from '@/lib/data';
 import { Badge } from './ui/badge';
 import { Circle, Loader2, PlusCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function AdminPanel() {
@@ -15,28 +15,32 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const usersCollection = collection(db, 'users');
-        const usersSnapshot = await getDocs(usersCollection);
-        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
-        setUsers(usersList);
+    setLoading(true);
+    
+    const fetchUsers = onSnapshot(collection(db, 'users'), (snapshot: QuerySnapshot<DocumentData>) => {
+      const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
+      setUsers(usersList);
+      // We can set loading to false here after the first fetch, 
+      // subsequent updates will happen automatically.
+      setLoading(false); 
+    }, (error) => {
+      console.error("Error fetching users: ", error);
+      setLoading(false); // Also stop loading on error
+    });
 
-        const instancesCollection = collection(db, 'instances');
-        const instancesSnapshot = await getDocs(instancesCollection);
-        const instancesList = instancesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Instance[];
-        setInstances(instancesList);
-
-      } catch (error) {
-        console.error("Error fetching data: ", error);
-        // Here you could show a toast message to the user
-      } finally {
-        setLoading(false);
-      }
+    const fetchInstances = onSnapshot(collection(db, 'instances'), (snapshot: QuerySnapshot<DocumentData>) => {
+      const instancesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Instance[];
+      setInstances(instancesList);
+    }, (error) => {
+      console.error("Error fetching instances: ", error);
+      // If users are the primary view, we might not need to set loading false here again.
+    });
+    
+    // Cleanup function to unsubscribe from listeners when the component unmounts
+    return () => {
+      fetchUsers();
+      fetchInstances();
     };
-
-    fetchData();
   }, []);
 
   return (
