@@ -6,42 +6,47 @@ import { type User, type Instance } from '@/lib/data';
 import { Badge } from './ui/badge';
 import { Circle, Loader2, PlusCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { collection, getDocs, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function AdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
   const [instances, setInstances] = useState<Instance[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingInstances, setLoadingInstances] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    
-    const fetchUsers = onSnapshot(collection(db, 'users'), (snapshot: QuerySnapshot<DocumentData>) => {
-      const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
-      setUsers(usersList);
-      // We can set loading to false here after the first fetch, 
-      // subsequent updates will happen automatically.
-      setLoading(false); 
-    }, (error) => {
-      console.error("Error fetching users: ", error);
-      setLoading(false); // Also stop loading on error
-    });
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), 
+      (snapshot: QuerySnapshot<DocumentData>) => {
+        const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
+        setUsers(usersList);
+        setLoadingUsers(false);
+      }, 
+      (error) => {
+        console.error("Error fetching users: ", error);
+        setLoadingUsers(false);
+      }
+    );
 
-    const fetchInstances = onSnapshot(collection(db, 'instances'), (snapshot: QuerySnapshot<DocumentData>) => {
-      const instancesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Instance[];
-      setInstances(instancesList);
-    }, (error) => {
-      console.error("Error fetching instances: ", error);
-      // If users are the primary view, we might not need to set loading false here again.
-    });
+    const unsubscribeInstances = onSnapshot(collection(db, 'instances'), 
+      (snapshot: QuerySnapshot<DocumentData>) => {
+        const instancesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Instance[];
+        setInstances(instancesList);
+        setLoadingInstances(false);
+      }, 
+      (error) => {
+        console.error("Error fetching instances: ", error);
+        setLoadingInstances(false);
+      }
+    );
     
-    // Cleanup function to unsubscribe from listeners when the component unmounts
     return () => {
-      fetchUsers();
-      fetchInstances();
+      unsubscribeUsers();
+      unsubscribeInstances();
     };
   }, []);
+
+  const loading = loadingUsers || loadingInstances;
 
   return (
     <div className="flex-1 flex flex-col bg-secondary/30">
@@ -67,7 +72,7 @@ export default function AdminPanel() {
                 </Button>
               </CardHeader>
               <CardContent>
-                {loading ? (
+                {loadingUsers ? (
                   <div className="flex justify-center items-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
@@ -82,7 +87,7 @@ export default function AdminPanel() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user) => (
+                    {users.length > 0 ? users.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell>
@@ -95,7 +100,11 @@ export default function AdminPanel() {
                           <Button variant="ghost" size="sm">Editar</Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center h-24">Nenhum usuário encontrado.</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
                 )}
@@ -115,7 +124,7 @@ export default function AdminPanel() {
                 </Button>
               </CardHeader>
               <CardContent>
-                 {loading ? (
+                 {loadingInstances ? (
                   <div className="flex justify-center items-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
@@ -131,7 +140,7 @@ export default function AdminPanel() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {instances.map((instance) => (
+                    {instances.length > 0 ? instances.map((instance) => (
                       <TableRow key={instance.id}>
                         <TableCell className="font-medium">{instance.name}</TableCell>
                         <TableCell>{instance.apiUrl}</TableCell>
@@ -146,7 +155,11 @@ export default function AdminPanel() {
                           <Button variant="ghost" size="sm">Editar</Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )) : (
+                       <TableRow>
+                        <TableCell colSpan={5} className="text-center h-24">Nenhuma instância encontrada.</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
                 )}
