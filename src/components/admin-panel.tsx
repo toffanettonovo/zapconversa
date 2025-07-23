@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { type User, type Instance } from '@/lib/data';
 import { Badge } from './ui/badge';
-import { Circle, Loader2, PlusCircle, Trash2, Edit, Copy } from 'lucide-react';
+import { Circle, Loader2, PlusCircle, Trash2, Edit, Copy, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, QuerySnapshot, DocumentData, addDoc, updateDoc, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -31,6 +31,8 @@ export default function AdminPanel() {
   const [instances, setInstances] = useState<Instance[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingInstances, setLoadingInstances] = useState(true);
+  const [isTestingWebhook, setIsTestingWebhook] = useState<string | null>(null);
+
   
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [isInstanceFormOpen, setIsInstanceFormOpen] = useState(false);
@@ -73,6 +75,39 @@ export default function AdminPanel() {
       unsubscribeInstances();
     };
   }, [toast]);
+  
+  const handleTestWebhook = async (instanceId: string) => {
+    setIsTestingWebhook(instanceId);
+    try {
+      const response = await fetch(`/api/webhook/${instanceId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          event: `testFromInstanceButton-${instanceId}`,
+          data: { message: `Este é um teste do painel de administração.` },
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Falha na resposta do servidor');
+      }
+      toast({
+        title: 'Teste de Webhook Enviado',
+        description: `Resposta: ${JSON.stringify(result)}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao Testar Webhook',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTestingWebhook(null);
+    }
+  };
+
 
   const handleSaveUser = async (userData: Omit<User, 'id'> & { id?: string; password?: string }) => {
     try {
@@ -345,6 +380,9 @@ export default function AdminPanel() {
                         <TableCell className="text-right">
                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" onClick={() => { setSelectedInstance(instance); setIsInstanceFormOpen(true); }}>
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-blue-500" onClick={() => handleTestWebhook(instance.id)} disabled={isTestingWebhook === instance.id}>
+                             {isTestingWebhook === instance.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                           </Button>
                           <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => openDeleteDialog(instance.id, 'instance')}>
                             <Trash2 className="h-4 w-4" />
