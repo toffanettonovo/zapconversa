@@ -1,7 +1,7 @@
 // src/app/api/webhook/[instanceId]/route.ts
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc, getDoc, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc, getDoc, query, where, getDocs, limit, increment } from 'firebase/firestore';
 import { getProfilePicUrl, getMediaAsDataUri } from '@/services/evolution-api';
 
 type RouteContext = {
@@ -150,6 +150,12 @@ async function handleMessageUpsert(instanceId: string, data: any) {
       lastMessage: lastMessageLabel,
       timestamp: serverTimestamp(),
     };
+    
+    // Só incrementa o contador se a mensagem não for minha
+    if (!key.fromMe) {
+        updateData.unreadCount = increment(1);
+    }
+    
     const currentData = conversationDocSnap.data();
     if (currentData && (!currentData.avatar || currentData.avatar.includes('placehold.co'))) {
         const newAvatarUrl = await getProfilePicUrl(instanceId, conversationId);
