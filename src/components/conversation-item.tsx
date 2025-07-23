@@ -20,11 +20,11 @@ export default function ConversationItem({ conversation, isSelected, onSelect }:
   return (
     <div
       className={cn("flex items-start gap-3 p-3 border-b border-[#1f2c33] cursor-pointer transition-colors relative",
-        isSelected ? 'bg-[#00a884]' : 'hover:bg-[#1f2c33]'
+        isSelected ? 'bg-[#363c3e]' : 'hover:bg-[#1f2c33]'
       )}
       onClick={onSelect}
     >
-      {isSelected && <div className="absolute left-0 top-0 h-full w-1 bg-[#00a884]" />}
+      {isSelected && <div className="absolute right-0 top-0 h-full w-px bg-[#01a870]" />}
       <Avatar className="h-12 w-12">
         <AvatarImage src={conversation.avatar} alt={conversation.name} data-ai-hint={conversation['data-ai-hint']} />
         <AvatarFallback>{conversation.name.charAt(0)}</AvatarFallback>
