@@ -3,15 +3,33 @@
 import { useState } from 'react';
 import ConversationList from './conversation-list';
 import MessagePanel from './message-panel';
-import { conversations, currentUser } from '@/lib/data';
+import { conversations } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
-import { WhatsappLogo } from './icons';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function ChatLayout() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
+  
+  // Placeholder for user data until auth is fully integrated
+  const displayUser = user ? {
+    name: user.email?.split('@')[0] || 'Usuário',
+    avatar: 'https://placehold.co/40x40.png',
+    'data-ai-hint': 'person avatar',
+    // These would come from your user data model
+    role: 'admin' as const, 
+    instance: 'Sistema'
+  } : {
+    name: 'Admin Sistema',
+    avatar: 'https://placehold.co/40x40.png',
+    'data-ai-hint': 'person avatar',
+    role: 'admin' as const,
+    instance: 'Sistema'
+  };
+
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0b141a]">
@@ -42,7 +60,7 @@ export default function ChatLayout() {
                 <ConversationList
                 onSelectConversation={setSelectedConversationId}
                 selectedConversationId={selectedConversationId}
-                currentUser={currentUser}
+                currentUser={displayUser}
                 />
             </div>
             <div className="flex-1 flex flex-col">

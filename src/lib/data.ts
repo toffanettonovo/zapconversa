@@ -85,6 +85,7 @@ export const instances = [
     { id: '2', name: 'Secundária', apiUrl: 'https://api.secundaria.com', webhook: 'https://webhook.secundaria.com', status: 'disconnected' },
 ];
 
+// This is now a placeholder, the actual user data will be fetched via authentication
 export const currentUser = {
   id: 'user-1',
   name: 'Admin Sistema',
