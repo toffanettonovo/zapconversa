@@ -8,9 +8,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { Loader2 } from 'lucide-react';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { Loader2, UserCircle, LogOut, Settings, Shield } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+
 
 export default function ChatLayout() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -29,14 +40,11 @@ export default function ChatLayout() {
         if (doc.exists()) {
           setUserData({ id: doc.id, ...doc.data() } as User);
         } else {
-          // User exists in Auth but not in Firestore. 
-          // Set a minimal user object so the UI can render basic info
-          // and they can access the admin panel to create their profile.
           setUserData({
             id: user.uid,
             email: user.email || '',
             name: user.displayName || 'Usuário sem Perfil',
-            role: 'user', // Default role
+            role: 'user',
             instanceIds: [],
           });
         }
@@ -57,12 +65,23 @@ export default function ChatLayout() {
     }
   }, [user]);
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error('Error signing out: ', error);
+    }
+  };
+
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
   
   const displayUser = userData ? {
+    id: userData.id,
     name: userData.name,
-    avatar: 'https://placehold.co/40x40.png',
+    email: userData.email,
+    avatar: userData.avatar || 'https://placehold.co/40x40.png',
     'data-ai-hint': 'person avatar',
     role: userData.role,
     instanceIds: userData.instanceIds,
@@ -73,7 +92,6 @@ export default function ChatLayout() {
   };
 
   const handleSettingsClick = () => {
-    // Placeholder for settings navigation
     console.log('Settings clicked');
   };
 
@@ -110,10 +128,35 @@ export default function ChatLayout() {
                     </Select>
                 </div>
             </div>
-            <div className="flex items-center gap-4 text-sm">
-                 {/* This button is now always visible for any logged-in user */}
-                  <Button variant="link" onClick={handleAdminClick} className="text-gray-300 hover:text-white p-0 h-auto">Admin Sistema</Button>
-                <Button variant="link" onClick={handleSettingsClick} className="text-gray-300 hover:text-white p-0 h-auto">Configurações</Button>
+             <div className="flex items-center gap-4 text-sm">
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-2 p-2 h-auto hover:bg-[#1f2c33]">
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src={displayUser?.avatar} alt={displayUser?.name} data-ai-hint={displayUser?.['data-ai-hint']} />
+                            <AvatarFallback>{displayUser?.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                         <span className="font-medium">{displayUser?.name}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="end">
+                        <DropdownMenuLabel>{displayUser?.email}</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleAdminClick}>
+                           <Shield className="mr-2 h-4 w-4" />
+                           <span>Admin Sistema</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleSettingsClick}>
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Configurações</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout}>
+                           <LogOut className="mr-2 h-4 w-4" />
+                           <span>Sair</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
