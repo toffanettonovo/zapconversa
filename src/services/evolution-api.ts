@@ -82,7 +82,13 @@ export async function getMediaAsDataUri(instanceId: string, messageKey: any, mes
 
     const result = await response.json();
     if (result.base64) {
-      const mimeType = messageData.audioMessage?.mimetype || 'audio/ogg';
+      let mimeType = 'application/octet-stream';
+      if (messageData.audioMessage) {
+        mimeType = messageData.audioMessage.mimetype || 'audio/ogg';
+      } else if (messageData.imageMessage) {
+        mimeType = messageData.imageMessage.mimetype || 'image/jpeg';
+      }
+
       const dataUri = `data:${mimeType};base64,${result.base64}`;
       return { dataUri, mimeType };
     }

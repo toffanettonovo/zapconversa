@@ -41,8 +41,12 @@ async function handleMessageUpsert(instanceId: string, data: any) {
       mediaUrl = mediaResult.dataUri;
     }
   } else if (messageData.imageMessage) {
-    messageText = messageData.imageMessage.caption || 'Foto';
+    messageText = messageData.imageMessage.caption || '';
     messageType = 'image';
+    const mediaResult = await getMediaAsDataUri(instanceId, key, messageData);
+    if(mediaResult.dataUri) {
+      mediaUrl = mediaResult.dataUri;
+    }
   } else if (messageData.videoMessage) {
     messageText = messageData.videoMessage.caption || 'Vídeo';
     messageType = 'video';
