@@ -26,7 +26,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
   let messageText = '[Mídia não suportada]';
   let messageType = 'unsupported';
   let mediaUrl = null;
-  let mediaName = undefined;
+  let mediaName: string | null = null;
 
   if (messageData.conversation) {
     messageText = messageData.conversation;
@@ -62,6 +62,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
   } else if (messageData.stickerMessage) {
     messageText = '';
     messageType = 'sticker';
+    mediaName = null;
   }
 
   // Label para a lista de conversas
@@ -70,7 +71,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
   if (messageType === 'image') lastMessageLabel = 'Foto';
   if (messageType === 'video') lastMessageLabel = 'Vídeo';
   if (messageType === 'sticker') lastMessageLabel = 'Figurinha';
-  if (messageType === 'document') lastMessageLabel = `Documento: ${mediaName}`;
+  if (messageType === 'document' && mediaName) lastMessageLabel = `Documento: ${mediaName}`;
 
 
   await addDoc(messagesCollectionRef, {
@@ -106,7 +107,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
       timestamp: serverTimestamp(),
     };
     const currentData = conversationDocSnap.data();
-    if (currentData && currentData.avatar && currentData.avatar.includes('placehold.co')) {
+    if (currentData && (!currentData.avatar || currentData.avatar.includes('placehold.co'))) {
         const newAvatarUrl = await getProfilePicUrl(instanceId, conversationId);
         if (newAvatarUrl) {
             updateData.avatar = newAvatarUrl;
