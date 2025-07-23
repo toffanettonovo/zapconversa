@@ -1,5 +1,10 @@
 'use server';
 
+import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
+import { db } from "./firebase";
+import { getProfilePicUrl } from "@/services/evolution-api";
+import type { Conversation } from "./data";
+
 export async function testWebhookAction(instanceId: string, instanceName: string, ngrokUrl: string) {
   if (!ngrokUrl) {
     return { success: false, error: 'A URL do ngrok não foi fornecida.' };
@@ -40,4 +45,43 @@ export async function testWebhookAction(instanceId: string, instanceName: string
   }
 }
 
-    
+export async function updateProfilePicturesAction() {
+    console.log('Iniciando a sincronização de fotos de perfil...');
+    const conversationsRef = collection(db, 'conversations');
+    const snapshot = await getDocs(conversationsRef);
+
+    if (snapshot.empty) {
+        console.log('Nenhuma conversa encontrada.');
+        return { success: true, message: 'Nenhuma conversa para verificar.' };
+    }
+
+    let updatedCount = 0;
+    let checkedCount = 0;
+    const promises = [];
+
+    for (const docSnap of snapshot.docs) {
+        checkedCount++;
+        const conversation = { id: docSnap.id, ...docSnap.data() } as Conversation;
+
+        if (conversation.avatar?.includes('placehold.co') && conversation.instanceId && conversation.id) {
+            const promise = getProfilePicUrl(conversation.instanceId, conversation.id)
+                .then(newAvatarUrl => {
+                    if (newAvatarUrl) {
+                        const conversationDocRef = doc(db, 'conversations', conversation.id);
+                        updatedCount++;
+                        return updateDoc(conversationDocRef, { avatar: newAvatarUrl });
+                    }
+                })
+                .catch(error => {
+                    console.error(`Erro ao buscar foto para ${conversation.id}:`, error);
+                });
+            promises.push(promise);
+        }
+    }
+
+    await Promise.all(promises);
+
+    const message = `Verificação concluída. ${updatedCount} de ${checkedCount} fotos de perfil foram atualizadas.`;
+    console.log(message);
+    return { success: true, message };
+}

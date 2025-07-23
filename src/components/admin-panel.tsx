@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { type User, type Instance, NGROK_URL as FALLBACK_NGROK_URL } from '@/lib/data';
 import { Badge } from './ui/badge';
-import { Circle, Loader2, PlusCircle, Trash2, Edit, Copy, Send, Server } from 'lucide-react';
+import { Circle, Loader2, PlusCircle, Trash2, Edit, Copy, Send, Server, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, QuerySnapshot, DocumentData, addDoc, updateDoc, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -14,7 +14,7 @@ import { InstanceForm } from './instance-form';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import WebhookLogs from './webhook-logs';
-import { testWebhookAction } from '@/lib/actions';
+import { testWebhookAction, updateProfilePicturesAction } from '@/lib/actions';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 
@@ -26,6 +26,7 @@ export default function AdminPanel() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingInstances, setLoadingInstances] = useState(true);
   const [isTestingWebhook, setIsTestingWebhook] = useState<string | null>(null);
+  const [isSyncingPhotos, setIsSyncingPhotos] = useState(false);
 
   const [ngrokUrl, setNgrokUrl] = useState('');
   
@@ -230,6 +231,29 @@ export default function AdminPanel() {
     }
   };
 
+  const handleSyncPhotos = async () => {
+    setIsSyncingPhotos(true);
+    toast({
+        title: 'Sincronização Iniciada',
+        description: 'Buscando fotos de perfil para contatos existentes. Isso pode levar alguns minutos...',
+    });
+    try {
+        const result = await updateProfilePicturesAction();
+        toast({
+            title: 'Sincronização Concluída',
+            description: result.message,
+        });
+    } catch (error: any) {
+        toast({
+            title: 'Erro na Sincronização',
+            description: error.message,
+            variant: 'destructive',
+        });
+    } finally {
+        setIsSyncingPhotos(false);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-transparent">
        <UserForm 
@@ -350,19 +374,32 @@ export default function AdminPanel() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="mb-6 p-4 rounded-lg border border-[#2a3942] bg-[#202c33] space-y-2">
-                    <Label htmlFor="ngrok-url" className="flex items-center gap-2 text-base font-semibold text-white">
-                        <Server className="h-5 w-5 text-gray-400" />
-                        URL Base do ngrok (Persistente)
-                    </Label>
-                    <p className="text-sm text-gray-400">Cole a URL gerada pelo ngrok aqui. Ela será usada para construir o webhook de todas as instâncias e será salva no seu navegador.</p>
-                    <Input 
-                        id="ngrok-url"
-                        value={ngrokUrl}
-                        onChange={(e) => handleNgrokUrlChange(e.target.value)}
-                        placeholder="Ex: https://abcdef123.ngrok-free.app"
-                        className="bg-[#2a3942] border-none"
-                    />
+                <div className="mb-6 p-4 rounded-lg border border-[#2a3942] bg-[#202c33] space-y-4">
+                  <div>
+                      <Label htmlFor="ngrok-url" className="flex items-center gap-2 text-base font-semibold text-white">
+                          <Server className="h-5 w-5 text-gray-400" />
+                          URL Base do ngrok (Persistente)
+                      </Label>
+                      <p className="text-sm text-gray-400 mt-1">Cole a URL gerada pelo ngrok aqui. Ela será usada para construir o webhook de todas as instâncias e será salva no seu navegador.</p>
+                      <Input 
+                          id="ngrok-url"
+                          value={ngrokUrl}
+                          onChange={(e) => handleNgrokUrlChange(e.target.value)}
+                          placeholder="Ex: https://abcdef123.ngrok-free.app"
+                          className="bg-[#2a3942] border-none mt-2"
+                      />
+                  </div>
+                  <div>
+                       <Label className="flex items-center gap-2 text-base font-semibold text-white">
+                          <RefreshCw className="h-5 w-5 text-gray-400" />
+                          Manutenção de Dados
+                      </Label>
+                      <p className="text-sm text-gray-400 mt-1">Execute tarefas de manutenção para manter os dados atualizados.</p>
+                      <Button onClick={handleSyncPhotos} disabled={isSyncingPhotos} variant="secondary" className="mt-2 bg-[#2a3942] hover:bg-[#2f404b]">
+                          {isSyncingPhotos ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                          Sincronizar Fotos de Perfil
+                      </Button>
+                  </div>
                 </div>
                  {loadingInstances ? (
                   <div className="flex justify-center items-center py-8">
