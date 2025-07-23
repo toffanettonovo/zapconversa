@@ -6,15 +6,9 @@ const clients = new Map<string, (data: string) => void>();
 
 function broadcast(data: string) {
   for (const send of clients.values()) {
-    try {
-        // Attempt to parse and stringify to format the JSON nicely if possible
-        const parsedData = JSON.parse(data);
-        const prettyData = JSON.stringify(parsedData, null, 2);
-        send(prettyData);
-    } catch (e) {
-        // If it's not valid JSON, send the raw string
-        send(data);
-    }
+    // IMPORTANT: Send the raw data without trying to parse/format it.
+    // This makes the logger robust against any type of webhook body.
+    send(data);
   }
 }
 
@@ -23,12 +17,14 @@ export async function GET(req: Request) {
     start(controller) {
       const id = Date.now().toString() + Math.random();
       const send = (data: string) => {
+        // The data is now a simple string, no need to stringify.
+        // It's sent in the EventStream format `data: <content>\n\n`.
         controller.enqueue(`data: ${data}\n\n`);
       };
 
       clients.set(id, send);
       
-      // Send a confirmation message on connection
+      // Send a simple confirmation message on connection
       send(JSON.stringify({ status: 'connected', message: 'Live log stream started.'}));
 
       req.signal.addEventListener('abort', () => {
