@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -20,12 +20,16 @@ const formSchema = z.object({
   email: z.string().email('O e-mail é inválido.'),
   password: z.string().optional(),
   role: z.enum(['admin', 'user']),
-  instanceIds: z.array(z.string()).refine((value) => value.some((item) => item), {
-    message: "Você precisa selecionar pelo menos uma instância.",
-  }),
-}).refine(data => {
-    return true; 
-}, {});
+  instanceIds: z.array(z.string()),
+}).refine((data) => {
+    if (data.role === 'user' && data.instanceIds.length === 0) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Você precisa selecionar pelo menos uma instância para usuários.",
+    path: ["instanceIds"],
+});
 
 
 type UserFormProps = {
@@ -41,7 +45,7 @@ export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: User
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: user ? { ...user } : {
+    defaultValues: user ? { ...user, instanceIds: user.instanceIds || [] } : {
       name: '',
       email: '',
       password: '',
@@ -49,15 +53,21 @@ export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: User
       instanceIds: [],
     },
   });
+
+  const role = useWatch({
+    control: form.control,
+    name: "role",
+  });
   
   useEffect(() => {
-    form.reset(user ? { ...user, password: '' } : {
+    const defaultValues = user ? { ...user, password: '', instanceIds: user.instanceIds || [] } : {
         name: '',
         email: '',
         password: '',
         role: 'user',
         instanceIds: [],
-      });
+      };
+    form.reset(defaultValues);
   }, [user, form, isOpen]);
 
 
@@ -66,7 +76,13 @@ export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: User
         form.setError("password", { type: "manual", message: "A senha é obrigatória para novos usuários." });
         return;
     }
-    onSave(user ? { ...user, ...values } : values);
+    
+    const dataToSave = { ...values };
+    if (dataToSave.role === 'admin') {
+      dataToSave.instanceIds = []; // Admins have implicit access to all
+    }
+
+    onSave(user ? { ...user, ...dataToSave } : dataToSave);
   };
 
   return (
@@ -142,56 +158,58 @@ export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: User
                     </FormItem>
                 )}
             />
-            <FormField
-                control={form.control}
-                name="instanceIds"
-                render={() => (
-                    <FormItem>
-                    <div className="mb-4">
-                        <FormLabel className="text-base">Instâncias Associadas</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                        Selecione as instâncias que este usuário terá acesso.
-                        </p>
-                    </div>
-                    <ScrollArea className="h-32 w-full rounded-md border border-[#2a3942] p-4">
-                    {instances.map((instance) => (
-                        <FormField
-                        key={instance.id}
-                        control={form.control}
-                        name="instanceIds"
-                        render={({ field }) => {
-                            return (
-                            <FormItem
-                                key={instance.id}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                                <FormControl>
-                                <Checkbox
-                                    checked={field.value?.includes(instance.id)}
-                                    onCheckedChange={(checked) => {
-                                    return checked
-                                        ? field.onChange([...(field.value || []), instance.id])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                            (value) => value !== instance.id
-                                            )
-                                        );
-                                    }}
-                                />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                {instance.name}
-                                </FormLabel>
-                            </FormItem>
-                            );
-                        }}
-                        />
-                    ))}
-                    </ScrollArea>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
+            {role === 'user' && (
+              <FormField
+                  control={form.control}
+                  name="instanceIds"
+                  render={() => (
+                      <FormItem>
+                      <div className="mb-4">
+                          <FormLabel className="text-base">Instâncias Associadas</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                          Selecione as instâncias que este usuário terá acesso.
+                          </p>
+                      </div>
+                      <ScrollArea className="h-32 w-full rounded-md border border-[#2a3942] p-4">
+                      {instances.map((instance) => (
+                          <FormField
+                          key={instance.id}
+                          control={form.control}
+                          name="instanceIds"
+                          render={({ field }) => {
+                              return (
+                              <FormItem
+                                  key={instance.id}
+                                  className="flex flex-row items-start space-x-3 space-y-0 mb-2"
+                              >
+                                  <FormControl>
+                                  <Checkbox
+                                      checked={field.value?.includes(instance.id)}
+                                      onCheckedChange={(checked) => {
+                                      return checked
+                                          ? field.onChange([...(field.value || []), instance.id])
+                                          : field.onChange(
+                                              field.value?.filter(
+                                              (value) => value !== instance.id
+                                              )
+                                          );
+                                      }}
+                                  />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">
+                                  {instance.name}
+                                  </FormLabel>
+                              </FormItem>
+                              );
+                          }}
+                          />
+                      ))}
+                      </ScrollArea>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+              />
+            )}
              <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" className="hover:bg-[#2a3942]" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button type="submit" className="bg-[#00a884] hover:bg-[#008f71]">Salvar</Button>

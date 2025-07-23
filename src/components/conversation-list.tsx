@@ -6,11 +6,12 @@ import { conversations, type User } from '@/lib/data';
 import { CircleDashed, MessageSquarePlus, MoreVertical, Search, Settings } from 'lucide-react';
 import ConversationItem from './conversation-item';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
 
 type ConversationListProps = {
   selectedConversationId: string | null;
   onSelectConversation: (id: string) => void;
-  currentUser: Pick<User, 'name' | 'avatar' | 'role' | 'instance'> & { 'data-ai-hint': string };
+  currentUser: (Pick<User, 'name' | 'role' | 'instanceIds'> & { avatar: string; 'data-ai-hint': string }) | null;
 };
 
 export default function ConversationList({
@@ -18,6 +19,21 @@ export default function ConversationList({
   onSelectConversation,
   currentUser,
 }: ConversationListProps) {
+    
+  if (!currentUser) {
+    return (
+        <div className="flex flex-col h-full bg-[#111b21] text-gray-300 items-center justify-center">
+            <p>Carregando dados do usuário...</p>
+        </div>
+    );
+  }
+
+  const instanceName = currentUser.role === 'admin' ? 'Todas as Instâncias' : 'Instâncias do Usuário';
+
+  const availableConversations = currentUser.role === 'admin' 
+    ? conversations
+    : conversations.filter(c => c.id === 'admin'); // Should filter by instanceIds later
+
   return (
     <div className="flex flex-col h-full bg-[#111b21] text-gray-300">
       <header className="flex items-center justify-between p-3 border-b border-[#1f2c33] bg-[#202c33]">
@@ -30,7 +46,7 @@ export default function ConversationList({
           </Avatar>
            <div>
               <h3 className="font-semibold text-white">{currentUser.name}</h3>
-              <p className="text-sm text-gray-400">{currentUser.instance}</p>
+              <p className="text-sm text-gray-400">{instanceName}</p>
               {currentUser.role === 'admin' && <p className="text-xs text-gray-500">Administrador</p>}
             </div>
         </div>
@@ -51,7 +67,7 @@ export default function ConversationList({
       </div>
       <ScrollArea className="flex-1">
         <div className="flex flex-col">
-          {conversations.map((convo) => (
+          {availableConversations.map((convo) => (
             <ConversationItem
               key={convo.id}
               conversation={convo}
