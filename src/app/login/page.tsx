@@ -51,13 +51,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="absolute top-0 left-0 w-full h-[222px] bg-primary"></div>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
+      <div className="absolute top-0 left-0 w-full h-[222px] bg-[#00a884]"></div>
       <Card className="z-10 w-full max-w-md shadow-lg">
         <CardHeader className="text-center items-center">
-          <WhatsappLogo className="h-20 w-20 text-primary mb-4" />
-          <CardTitle className="text-3xl font-normal tracking-tight">WhatsApp Web</CardTitle>
-          <CardDescription className="text-muted-foreground mt-2 text-base">
+          <WhatsappLogo className="h-20 w-20 text-[#00a884] mb-4" />
+          <CardTitle className="text-3xl font-normal tracking-tight text-gray-700">WhatsApp Web</CardTitle>
+          <CardDescription className="text-gray-500 mt-2 text-base">
             Entre com sua conta para continuar
           </CardDescription>
         </CardHeader>
@@ -69,7 +69,7 @@ export default function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-light text-muted-foreground">Email</FormLabel>
+                    <FormLabel className="text-sm font-light text-gray-500">Email</FormLabel>
                     <FormControl>
                       <Input placeholder="seu@email.com" {...field} className="bg-white border-gray-300 rounded-md" />
                     </FormControl>
@@ -82,7 +82,7 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-light text-muted-foreground">Senha</FormLabel>
+                    <FormLabel className="text-sm font-light text-gray-500">Senha</FormLabel>
                     <FormControl>
                       <Input type="password" placeholder="········" {...field} className="bg-white border-gray-300 rounded-md" />
                     </FormControl>
@@ -90,7 +90,7 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 rounded-md" disabled={loading}>
+              <Button type="submit" className="w-full bg-[#00a884] hover:bg-[#008f71] text-white rounded-md" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Entrar
               </Button>
