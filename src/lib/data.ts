@@ -36,6 +36,8 @@ export type Instance = {
   updatedAt?: any; // Firestore Timestamp
 };
 
+export const NGROK_URL = 'https://d6b6cfd5f1c2.ngrok-free.app';
+
 
 export const conversations: Conversation[] = [
   {

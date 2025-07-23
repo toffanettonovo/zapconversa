@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { type User, type Instance } from '@/lib/data';
+import { type User, type Instance, NGROK_URL } from '@/lib/data';
 import { Badge } from './ui/badge';
 import { Circle, Loader2, PlusCircle, Trash2, Edit, Copy, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -66,17 +66,18 @@ export default function AdminPanel() {
   }, [toast]);
   
   const handleTestWebhook = async (instanceId: string) => {
-    const instance = instances.find(inst => inst.id === instanceId);
-    if (!instance || !instance.webhookUrl) {
+    if (!NGROK_URL) {
       toast({
-        title: 'URL do Webhook não configurada',
-        description: 'Por favor, edite a instância e defina uma URL de webhook (ngrok) válida.',
+        title: 'URL do ngrok não configurada',
+        description: 'A URL fixa do ngrok não está definida no sistema.',
         variant: 'destructive',
       });
       return;
     }
     
-    const finalWebhookUrl = `${instance.webhookUrl}/api/webhook/${instance.id}`;
+    const finalWebhookUrl = `${NGROK_URL}/api/webhook/${instanceId}`;
+    const instance = instances.find(inst => inst.id === instanceId);
+
 
     setIsTestingWebhook(instanceId);
     try {
@@ -87,8 +88,8 @@ export default function AdminPanel() {
         },
         body: JSON.stringify([{
           event: `testFromInstanceButton-${instanceId}`,
-          data: { message: `Este é um teste do painel de administração para a instância ${instance.name}.` },
-          instance: instance.name
+          data: { message: `Este é um teste do painel de administração para a instância ${instance?.name}.` },
+          instance: instance?.name
         }]),
       });
 
@@ -188,11 +189,16 @@ export default function AdminPanel() {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleSaveInstance = async (instanceData: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity'> & { id?: string }) => {
+  const handleSaveInstance = async (instanceData: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity' | 'webhookUrl'> & { id?: string }) => {
     try {
+      const dataWithWebhook = {
+        ...instanceData,
+        webhookUrl: NGROK_URL,
+      };
+
       if (instanceData.id) { // Editing
         const instanceRef = doc(db, 'instances', instanceData.id);
-        const { id, ...updateData } = instanceData;
+        const { id, ...updateData } = dataWithWebhook;
         await updateDoc(instanceRef, {
           ...updateData,
           updatedAt: serverTimestamp(),
@@ -200,7 +206,7 @@ export default function AdminPanel() {
         toast({ title: "Sucesso", description: "Instância atualizada." });
       } else { // Creating
         await addDoc(collection(db, 'instances'), {
-          ...instanceData,
+          ...dataWithWebhook,
           lastActivity: serverTimestamp(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -220,9 +226,8 @@ export default function AdminPanel() {
   };
   
   const handleCopyWebhook = (id: string) => {
-    const instance = instances.find(inst => inst.id === id);
-    if (instance && instance.webhookUrl) {
-      const finalUrl = `${instance.webhookUrl}/api/webhook/${instance.id}`;
+    if (NGROK_URL) {
+      const finalUrl = `${NGROK_URL}/api/webhook/${id}`;
       navigator.clipboard.writeText(finalUrl);
       toast({ title: 'Copiado!', description: 'URL final do Webhook copiada para a área de transferência.' });
     }
@@ -358,7 +363,7 @@ export default function AdminPanel() {
                     <TableRow className="border-[#1f2c33] hover:bg-transparent">
                       <TableHead className="text-gray-400">Nome</TableHead>
                       <TableHead className="text-gray-400">URL da API</TableHead>
-                      <TableHead className="text-gray-400">Webhook Host</TableHead>
+                      <TableHead className="text-gray-400">Webhook (ngrok)</TableHead>
                       <TableHead className="text-gray-400">Status</TableHead>
                       <TableHead className="text-right text-gray-400">Ações</TableHead>
                     </TableRow>
@@ -370,7 +375,7 @@ export default function AdminPanel() {
                         <TableCell className="text-gray-300">{instance.apiUrl}</TableCell>
                         <TableCell className="text-gray-300 text-xs">
                           <div className="flex items-center gap-2">
-                             <span>{instance.webhookUrl}</span>
+                             <span>{`${NGROK_URL}/api/webhook/${instance.id}`}</span>
                              <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white" onClick={() => handleCopyWebhook(instance.id)}>
                                 <Copy className="h-3 w-3" />
                              </Button>
