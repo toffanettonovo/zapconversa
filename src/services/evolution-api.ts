@@ -11,7 +11,7 @@ async function getInstance(instanceId: string): Promise<Instance | null> {
     console.error(`Instância com ID ${instanceId} não encontrada no Firestore.`);
     return null;
   }
-  return instanceSnap.data() as Instance;
+  return { id: instanceSnap.id, ...instanceSnap.data() } as Instance;
 }
 
 export async function getProfilePicUrl(instanceId: string, remoteJid: string): Promise<string | null> {
@@ -21,15 +21,19 @@ export async function getProfilePicUrl(instanceId: string, remoteJid: string): P
     return null;
   }
 
-  const { apiUrl, apiKey } = instance;
-  const endpoint = `${apiUrl}/chat/fetchProfile/${remoteJid}`;
-  
+  const { apiUrl, apiKey, name: instanceName } = instance;
+  // Endpoint e método corretos, conforme o curl funcional
+  const endpoint = `${apiUrl}/chat/fetchProfilePictureUrl/${instanceName}`;
+  const phoneNumber = remoteJid.split('@')[0]; // Remove o sufixo @s.whatsapp.net
+
   try {
     const response = await fetch(endpoint, {
-      method: 'GET',
+      method: 'POST', // Método correto é POST
       headers: {
         'apikey': apiKey,
+        'Content-Type': 'application/json', // Header necessário para o POST
       },
+      body: JSON.stringify({ number: phoneNumber }), // Corpo da requisição com o número
       cache: 'no-store',
     });
 
@@ -43,6 +47,7 @@ export async function getProfilePicUrl(instanceId: string, remoteJid: string): P
     }
     
     const data = await response.json();
+    // A resposta contém a URL no campo profilePictureUrl
     return data?.profilePictureUrl || null;
 
   } catch (error) {
