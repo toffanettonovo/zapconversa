@@ -132,11 +132,14 @@ export async function sendTextMessage(instanceId: string, number: string, text: 
     if (!response.ok) {
         let errorBody = 'Falha ao ler o corpo do erro da API.';
         try {
+            // Tenta clonar a resposta para poder ler como texto e json
             const clonedResponse = response.clone();
+            // Tenta ler como JSON, se falhar, lê como texto
             const jsonError = await clonedResponse.json().catch(() => null);
             if (jsonError && (jsonError.message || jsonError.error)) {
                 errorBody = `API Error: ${jsonError.message || jsonError.error}`;
             } else {
+                 // Fallback para texto se não for JSON ou não tiver os campos esperados
                  errorBody = await response.text();
             }
         } catch (e) {
@@ -150,6 +153,7 @@ export async function sendTextMessage(instanceId: string, number: string, text: 
     
   } catch (error) {
     console.error('Erro fatal na chamada da API da Evolution para enviar texto:', error);
+    // Re-lança o erro para que a Server Action possa capturá-lo e reportar ao cliente
     throw error;
   }
 }
