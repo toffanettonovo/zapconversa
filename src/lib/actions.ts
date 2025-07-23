@@ -1,13 +1,11 @@
 'use server';
 
-import { NGROK_URL } from "./data";
-
-export async function testWebhookAction(instanceId: string, instanceName: string) {
-  if (!NGROK_URL) {
-    return { success: false, error: 'A URL fixa do ngrok não está definida no sistema.' };
+export async function testWebhookAction(instanceId: string, instanceName: string, ngrokUrl: string) {
+  if (!ngrokUrl) {
+    return { success: false, error: 'A URL do ngrok não foi fornecida.' };
   }
 
-  const finalWebhookUrl = `${NGROK_URL}/api/webhook/${instanceId}`;
+  const finalWebhookUrl = `${ngrokUrl}/api/webhook/${instanceId}`;
 
   try {
     const response = await fetch(finalWebhookUrl, {
@@ -41,3 +39,5 @@ export async function testWebhookAction(instanceId: string, instanceName: string
     return { success: false, error: error.message };
   }
 }
+
+    

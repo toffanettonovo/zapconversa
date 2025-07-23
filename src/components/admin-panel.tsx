@@ -2,9 +2,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { type User, type Instance, NGROK_URL } from '@/lib/data';
+import { type User, type Instance, NGROK_URL as FALLBACK_NGROK_URL } from '@/lib/data';
 import { Badge } from './ui/badge';
-import { Circle, Loader2, PlusCircle, Trash2, Edit, Copy, Send } from 'lucide-react';
+import { Circle, Loader2, PlusCircle, Trash2, Edit, Copy, Send, Server } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, QuerySnapshot, DocumentData, addDoc, updateDoc, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import WebhookLogs from './webhook-logs';
 import { testWebhookAction } from '@/lib/actions';
+import { Label } from './ui/label';
+import { Input } from './ui/input';
 
 export default function AdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
@@ -23,6 +25,7 @@ export default function AdminPanel() {
   const [loadingInstances, setLoadingInstances] = useState(true);
   const [isTestingWebhook, setIsTestingWebhook] = useState<string | null>(null);
 
+  const [ngrokUrl, setNgrokUrl] = useState(FALLBACK_NGROK_URL);
   
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [isInstanceFormOpen, setIsInstanceFormOpen] = useState(false);
@@ -67,6 +70,11 @@ export default function AdminPanel() {
   }, [toast]);
   
   const handleTestWebhook = async (instanceId: string) => {
+    if (!ngrokUrl) {
+        toast({ title: 'Erro', description: 'Por favor, insira a URL do ngrok antes de testar.', variant: 'destructive' });
+        return;
+    }
+
     const instance = instances.find(inst => inst.id === instanceId);
     if (!instance) {
         toast({ title: 'Erro', description: 'Instância não encontrada.', variant: 'destructive' });
@@ -76,7 +84,7 @@ export default function AdminPanel() {
     setIsTestingWebhook(instanceId);
 
     try {
-        const result = await testWebhookAction(instanceId, instance.name);
+        const result = await testWebhookAction(instanceId, instance.name, ngrokUrl);
         
         if (result.success) {
             toast({
@@ -172,14 +180,9 @@ export default function AdminPanel() {
 
   const handleSaveInstance = async (instanceData: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity' | 'webhookUrl'> & { id?: string }) => {
     try {
-      const dataWithWebhook = {
-        ...instanceData,
-        webhookUrl: NGROK_URL, // Always use the fixed ngrok URL
-      };
-
       if (instanceData.id) { // Editing
         const instanceRef = doc(db, 'instances', instanceData.id);
-        const { id, ...updateData } = dataWithWebhook;
+        const { id, ...updateData } = instanceData;
         await updateDoc(instanceRef, {
           ...updateData,
           updatedAt: serverTimestamp(),
@@ -187,7 +190,7 @@ export default function AdminPanel() {
         toast({ title: "Sucesso", description: "Instância atualizada." });
       } else { // Creating
         await addDoc(collection(db, 'instances'), {
-          ...dataWithWebhook,
+          ...instanceData,
           lastActivity: serverTimestamp(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -207,10 +210,12 @@ export default function AdminPanel() {
   };
   
   const handleCopyWebhook = (id: string) => {
-    if (NGROK_URL) {
-      const finalUrl = `${NGROK_URL}/api/webhook/${id}`;
+    if (ngrokUrl) {
+      const finalUrl = `${ngrokUrl}/api/webhook/${id}`;
       navigator.clipboard.writeText(finalUrl);
       toast({ title: 'Copiado!', description: 'URL final do Webhook copiada para a área de transferência.' });
+    } else {
+       toast({ title: 'Erro', description: 'Por favor, insira a URL do ngrok antes de copiar.', variant: 'destructive' });
     }
   };
 
@@ -334,6 +339,20 @@ export default function AdminPanel() {
                 </Button>
               </CardHeader>
               <CardContent>
+                <div className="mb-6 p-4 rounded-lg border border-[#2a3942] bg-[#202c33] space-y-2">
+                    <Label htmlFor="ngrok-url" className="flex items-center gap-2 text-base font-semibold text-white">
+                        <Server className="h-5 w-5 text-gray-400" />
+                        URL Base do ngrok
+                    </Label>
+                    <p className="text-sm text-gray-400">Cole a URL gerada pelo ngrok aqui. Ela será usada para construir o webhook de todas as instâncias abaixo.</p>
+                    <Input 
+                        id="ngrok-url"
+                        value={ngrokUrl}
+                        onChange={(e) => setNgrokUrl(e.target.value)}
+                        placeholder="Ex: https://abcdef123.ngrok-free.app"
+                        className="bg-[#2a3942] border-none"
+                    />
+                </div>
                  {loadingInstances ? (
                   <div className="flex justify-center items-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -356,7 +375,7 @@ export default function AdminPanel() {
                         <TableCell className="text-gray-300">{instance.apiUrl}</TableCell>
                         <TableCell className="text-gray-300 text-xs">
                           <div className="flex items-center gap-2">
-                             <span>{`${NGROK_URL}/api/webhook/${instance.id}`}</span>
+                             <span>{`${ngrokUrl || '...'}/api/webhook/${instance.id}`}</span>
                              <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white" onClick={() => handleCopyWebhook(instance.id)}>
                                 <Copy className="h-3 w-3" />
                              </Button>
@@ -399,3 +418,5 @@ export default function AdminPanel() {
     </div>
   );
 }
+
+    

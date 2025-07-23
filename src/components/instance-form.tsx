@@ -11,9 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
-import { type Instance, NGROK_URL } from '@/lib/data';
-import { Copy } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { type Instance } from '@/lib/data';
 
 const formSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório.'),
@@ -32,7 +30,6 @@ type InstanceFormProps = {
 };
 
 export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: InstanceFormProps) {
-  const { toast } = useToast();
   const form = useForm<InstanceFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: instance || {
@@ -54,14 +51,6 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
 
   const onSubmit = (values: InstanceFormData) => {
     onSave(instance ? { ...instance, ...values } : values);
-  };
-  
-  const handleCopyWebhook = (id: string | undefined) => {
-    if (id && NGROK_URL) {
-      const finalUrl = `${NGROK_URL}/api/webhook/${id}`;
-      navigator.clipboard.writeText(finalUrl);
-      toast({ title: 'Copiado!', description: 'URL final do Webhook copiada para a área de transferência.' });
-    }
   };
 
   return (
@@ -115,18 +104,8 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
               )}
             />
              <div className="space-y-2">
-                <Label>URL do Webhook (Gerada Automaticamente)</Label>
-                <div className="flex items-center gap-2">
-                  <Input 
-                    value={instance ? `${NGROK_URL}/api/webhook/${instance.id}` : 'Salve a instância para gerar a URL'} 
-                    readOnly 
-                    className="bg-[#2a3942] border-none text-gray-400"
-                  />
-                   <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" type="button" onClick={() => handleCopyWebhook(instance?.id)} disabled={!instance}>
-                      <Copy className="h-4 w-4" />
-                   </Button>
-                </div>
-                <p className="text-xs text-gray-500">Use esta URL na sua plataforma da Evolution API.</p>
+                <Label>URL do Webhook</Label>
+                 <p className="text-xs text-gray-500">A URL do webhook é agora gerenciada dinamicamente na tela principal do painel de administração.</p>
              </div>
             <FormField
               control={form.control}
@@ -156,3 +135,5 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
     </Dialog>
   );
 }
+
+    
