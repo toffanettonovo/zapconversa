@@ -12,6 +12,7 @@ export type Conversation = {
   lastMessage: string;
   timestamp: string;
   unreadCount?: number;
+  "data-ai-hint"?: string;
 };
 
 export type User = {
@@ -24,44 +25,36 @@ export type User = {
 export const conversations: Conversation[] = [
   {
     id: '1',
-    name: 'Ana Silva',
+    name: '5511931996806 (WhatsApp)',
     avatar: 'https://placehold.co/40x40.png',
-    lastMessage: 'Ok, combinado! Te vejo lá.',
-    timestamp: '10:40',
-    unreadCount: 2,
-    "data-ai-hint": "woman portrait",
+    lastMessage: 'Ei, parceiro! 😉 Apenas um aviso rápido...',
+    timestamp: '08:22',
+    unreadCount: 0,
+    "data-ai-hint": "person smiling",
   },
   {
     id: '2',
-    name: 'Equipe de Marketing',
+    name: 'Thiago Toffanetto (WhatsApp)',
     avatar: 'https://placehold.co/40x40.png',
-    lastMessage: 'Carlos: Alguém pode revisar o copy?',
-    timestamp: '10:35',
-    "data-ai-hint": "team meeting",
+    lastMessage: 'Foto',
+    timestamp: 'ontem',
+    "data-ai-hint": "man portrait",
   },
   {
     id: '3',
-    name: 'Projeto Alfa',
+    name: 'Audio Tester (WhatsApp)',
     avatar: 'https://placehold.co/40x40.png',
-    lastMessage: 'Você: O build falhou novamente.',
-    timestamp: 'Ontem',
-    "data-ai-hint": "abstract project",
+    lastMessage: 'Áudio',
+    timestamp: 'ontem',
+    "data-ai-hint": "abstract audio",
   },
   {
     id: '4',
-    name: 'Beatriz Costa',
+    name: 'Test Audio User (WhatsApp)',
     avatar: 'https://placehold.co/40x40.png',
-    lastMessage: 'Obrigada pela ajuda!',
-    timestamp: 'Ontem',
-    "data-ai-hint": "woman smiling",
-  },
-    {
-    id: '5',
-    name: 'Conversa Longa para Resumo',
-    avatar: 'https://placehold.co/40x40.png',
-    lastMessage: 'Vamos recapitular os pontos principais da nossa discussão sobre a campanha de marketing de verão. Primeiramente, concordamos em focar nos anúncios do Instagram e do Facebook, com um orçamento de R$5.000 para cada plataforma. A Ana ficou responsável por criar os visuais e o texto dos anúncios até sexta-feira. O João vai configurar as campanhas e o rastreamento de conversões. Também decidimos que a campanha será lançada no dia 15 do próximo mês e durará quatro semanas. Precisamos de uma reunião de acompanhamento em duas semanas para verificar o progresso. Alguma dúvida?',
-    timestamp: '2 dias atrás',
-    "data-ai-hint": "document summary",
+    lastMessage: 'Áudio',
+    timestamp: 'ontem',
+    "data-ai-hint": "abstract technology",
   },
 ];
 
@@ -79,26 +72,6 @@ export const messages: Record<string, Message[]> = {
     { id: '2-1', text: 'Pessoal, a nova campanha de outono precisa ser finalizada até amanhã.', sender: 'them', timestamp: '10:30' },
     { id: '2-2', text: 'Carlos: Alguém pode revisar o copy?', sender: 'them', timestamp: '10:35' },
   ],
-  '3': [
-    { id: '3-1', text: 'O deploy de staging está no ar.', sender: 'them', timestamp: 'Ontem' },
-    { id: '3-2', text: 'O build falhou novamente.', sender: 'me', timestamp: 'Ontem' },
-  ],
-  '4': [
-    { id: '4-1', text: 'Pode me ajudar com uma coisa?', sender: 'them', timestamp: 'Ontem' },
-    { id: '4-2', text: 'Claro!', sender: 'me', timestamp: 'Ontem' },
-    { id: '4-3', text: 'Obrigada pela ajuda!', sender: 'them', timestamp: 'Ontem' },
-  ],
-   '5': [
-    { id: '5-1', text: 'Olá equipe. Vamos discutir a campanha de marketing de verão. Quais são as propostas iniciais?', sender: 'them', timestamp: '2 dias atrás' },
-    { id: '5-2', text: 'Acho que deveríamos focar no Instagram e Facebook. São nossas plataformas mais fortes.', sender: 'me', timestamp: '2 dias atrás' },
-    { id: '5-3', text: 'Concordo. Qual seria o orçamento?', sender: 'them', timestamp: '2 dias atrás' },
-    { id: '5-4', text: 'Sugiro R$5.000 para cada uma, totalizando R$10.000.', sender: 'me', timestamp: '2 dias atrás' },
-    { id: '5-5', text: 'Parece razoável. Quem fica com as tarefas? Eu posso cuidar dos visuais e do copy.', sender: 'them', timestamp: '2 dias atrás' },
-    { id: '5-6', text: 'Ótimo, Ana! Eu posso configurar as campanhas e o rastreamento. Quando lançamos?', sender: 'me', timestamp: '2 dias atrás' },
-    { id: '5-7', text: 'Que tal dia 15 do próximo mês? E a campanha dura 4 semanas.', sender: 'them', timestamp: '2 dias atrás' },
-    { id: '5-8', text: 'Perfeito. Marcamos um acompanhamento em duas semanas?', sender: 'me', timestamp: '2 dias atrás' },
-    { id: '5-9', text: 'Vamos recapitular os pontos principais da nossa discussão sobre a campanha de marketing de verão. Primeiramente, concordamos em focar nos anúncios do Instagram e do Facebook, com um orçamento de R$5.000 para cada plataforma. A Ana ficou responsável por criar os visuais e o texto dos anúncios até sexta-feira. O João vai configurar as campanhas e o rastreamento de conversões. Também decidimos que a campanha será lançada no dia 15 do próximo mês e durará quatro semanas. Precisamos de uma reunião de acompanhamento em duas semanas para verificar o progresso. Alguma dúvida?', sender: 'them', timestamp: '2 dias atrás' }
-  ],
 };
 
 export const users: User[] = [
@@ -114,8 +87,9 @@ export const instances = [
 
 export const currentUser = {
   id: 'user-1',
-  name: 'Usuário Atual',
+  name: 'Admin Sistema',
   avatar: 'https://placehold.co/40x40.png',
   role: 'admin',
+  instance: 'Sistema',
   "data-ai-hint": "person avatar",
 };

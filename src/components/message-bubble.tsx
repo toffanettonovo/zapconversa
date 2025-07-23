@@ -1,5 +1,6 @@
 import { type Message } from '@/lib/data';
 import { cn } from '@/lib/utils';
+import { Check, CheckCheck } from 'lucide-react';
 
 type MessageBubbleProps = {
   message: Message;
@@ -11,14 +12,15 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
     <div className={cn('flex', isMine ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-md rounded-lg px-3 py-2 shadow',
-          isMine ? 'bg-primary/90 text-primary-foreground' : 'bg-card'
+          'max-w-xl rounded-lg px-3 py-1.5 shadow-md',
+          isMine ? 'bg-[#005c4b]' : 'bg-[#202c33]'
         )}
       >
-        <p className="text-sm">{message.text}</p>
-        <p className={cn('text-xs mt-1', isMine ? 'text-primary-foreground/70' : 'text-muted-foreground/70', 'text-right')}>
-          {message.timestamp}
-        </p>
+        <p className="text-sm text-white">{message.text}</p>
+        <div className={cn('flex items-center justify-end text-xs mt-1', isMine ? 'text-gray-400' : 'text-gray-500')}>
+          <span>{message.timestamp}</span>
+          {isMine && <CheckCheck className="h-4 w-4 ml-1 text-[#53bdeb]" />}
+        </div>
       </div>
     </div>
   );
