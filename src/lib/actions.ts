@@ -2,7 +2,7 @@
 
 import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import { getProfilePicUrl } from "@/services/evolution-api";
+import { getProfilePicUrl, sendTextMessage } from "@/services/evolution-api";
 import type { Conversation } from "./data";
 
 export async function testWebhookAction(instanceId: string, instanceName: string, ngrokUrl: string) {
@@ -85,4 +85,19 @@ export async function updateProfilePicturesAction() {
     const message = `Verificação concluída. ${updatedCount} de ${checkedCount} fotos de perfil foram atualizadas.`;
     console.log(message);
     return { success: true, message };
+}
+
+
+export async function sendTextMessageAction(instanceId: string, number: string, text: string) {
+  try {
+    const result = await sendTextMessage(instanceId, number, text);
+    if (result.key && result.key.id) {
+      return { success: true, messageId: result.key.id };
+    }
+    // Se a chave não estiver presente, mas a API não retornou erro, algo inesperado aconteceu.
+    return { success: false, error: 'A API não retornou um ID de mensagem, mas não indicou um erro.', details: result };
+  } catch (error: any) {
+    console.error('Erro ao enviar mensagem de texto via Server Action:', error);
+    return { success: false, error: error.message };
+  }
 }

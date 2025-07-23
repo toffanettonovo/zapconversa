@@ -103,3 +103,43 @@ export async function getMediaAsDataUri(instanceId: string, messageKey: any, mes
     return { dataUri: null, mimeType: null };
   }
 }
+
+export async function sendTextMessage(instanceId: string, number: string, text: string) {
+  const instance = await getInstance(instanceId);
+  if (!instance || !instance.isActive) {
+    throw new Error(`Instância ${instanceId} não encontrada ou inativa.`);
+  }
+
+  const { apiUrl, apiKey, name: instanceName } = instance;
+  const endpoint = `${apiUrl}/message/sendText/${instanceName}`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'apikey': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        number: number.split('@')[0], // Garante que estamos enviando apenas o número
+        textMessage: {
+          text: text,
+        },
+      }),
+      cache: 'no-store',
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error('API Error Response:', responseData);
+      const errorMessage = responseData.message || responseData.error || `Erro ${response.status}`;
+      throw new Error(`Falha ao enviar mensagem: ${errorMessage}`);
+    }
+
+    return responseData;
+  } catch (error) {
+    console.error('Erro na chamada da API da Evolution para enviar texto:', error);
+    throw error;
+  }
+}

@@ -9,9 +9,11 @@ import SmartReply from './smart-reply';
 import AdminPanel from './admin-panel';
 import ConversationSummary from './conversation-summary';
 import { WhatsappLogo } from './icons';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot, query, orderBy, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { sendTextMessageAction } from '@/lib/actions';
+import { useToast } from '@/hooks/use-toast';
 
 type MessagePanelProps = {
   conversation: Conversation | undefined;
@@ -23,10 +25,13 @@ function formatMessageTimestamp(timestamp: any): string {
     return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-
 export default function MessagePanel({ conversation }: MessagePanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (conversation?.id && conversation.id !== 'admin') {
@@ -56,7 +61,32 @@ export default function MessagePanel({ conversation }: MessagePanelProps) {
         setMessages([]);
     }
   }, [conversation]);
+  
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !conversation || !conversation.instanceId) return;
 
+    setIsSending(true);
+    try {
+      const result = await sendTextMessageAction(conversation.instanceId, conversation.id, messageText);
+      if (result.success) {
+        setMessageText('');
+      } else {
+        toast({
+          title: 'Erro ao Enviar Mensagem',
+          description: result.error || 'Não foi possível enviar a mensagem.',
+          variant: 'destructive'
+        });
+      }
+    } catch (error: any) {
+      toast({
+          title: 'Erro de Rede',
+          description: 'Ocorreu um erro ao tentar se comunicar com o servidor.',
+          variant: 'destructive'
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   if (conversation?.id === 'admin') {
     return <AdminPanel />;
@@ -115,18 +145,24 @@ export default function MessagePanel({ conversation }: MessagePanelProps) {
       </ScrollArea>
       <SmartReply messages={messages} />
       <footer className="p-3 bg-[#202c33] border-t border-[#1f2c33]">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="hover:bg-[#2a3942]">
+        <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="hover:bg-[#2a3942]" type="button">
             <Smile className="h-6 w-6 text-gray-400" />
           </Button>
-          <Button variant="ghost" size="icon" className="hover:bg-[#2a3942]">
+          <Button variant="ghost" size="icon" className="hover:bg-[#2a3942]" type="button">
             <Paperclip className="h-6 w-6 text-gray-400" />
           </Button>
-          <Input placeholder="Digite uma mensagem" className="flex-1 bg-[#2a3942] border-none rounded-lg text-sm" />
-          <Button size="icon" className="bg-[#00a884] hover:bg-[#008f71]">
-            <SendHorizontal className="h-5 w-5 text-white" />
+          <Input 
+            placeholder="Digite uma mensagem" 
+            className="flex-1 bg-[#2a3942] border-none rounded-lg text-sm"
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            disabled={isSending}
+          />
+          <Button size="icon" className="bg-[#00a884] hover:bg-[#008f71]" type="submit" disabled={isSending || !messageText.trim()}>
+            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5 text-white" />}
           </Button>
-        </div>
+        </form>
       </footer>
     </div>
   );
