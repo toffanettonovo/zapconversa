@@ -1,6 +1,6 @@
 'use server';
 
-import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
+import { collection, doc, getDocs, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
 import { getProfilePicUrl, sendTextMessage } from "@/services/evolution-api";
 import type { Conversation } from "./data";
@@ -90,12 +90,38 @@ export async function updateProfilePicturesAction() {
 
 export async function sendTextMessageAction(instanceId: string, number: string, text: string) {
   try {
+    // 1. Envia a mensagem pela API da Evolution
     const result = await sendTextMessage(instanceId, number, text);
-    if (result.key && result.key.id) {
-      return { success: true, messageId: result.key.id };
+
+    if (!result.key || !result.key.id) {
+       return { success: false, error: 'A API não retornou um ID de mensagem, mas não indicou um erro.', details: result };
     }
-    // Se a chave não estiver presente, mas a API não retornou erro, algo inesperado aconteceu.
-    return { success: false, error: 'A API não retornou um ID de mensagem, mas não indicou um erro.', details: result };
+    
+    // 2. Grava a mensagem enviada diretamente no Firestore
+    const conversationRef = doc(db, 'conversations', number);
+    const messagesCollectionRef = collection(conversationRef, 'messages');
+    
+    await addDoc(messagesCollectionRef, {
+        text: text,
+        sender: 'me',
+        timestamp: serverTimestamp(),
+        messageTimestamp: new Date(),
+        fromMe: true,
+        messageId: result.key.id,
+        instanceId: instanceId,
+        messageType: 'text',
+        mediaUrl: null,
+        mediaName: null,
+    });
+
+    // 3. Atualiza a conversa com a última mensagem
+    await updateDoc(conversationRef, {
+        lastMessage: text,
+        timestamp: serverTimestamp(),
+    });
+
+    return { success: true, messageId: result.key.id };
+
   } catch (error: any) {
     console.error('Erro ao enviar mensagem de texto via Server Action:', error);
     return { success: false, error: error.message };
