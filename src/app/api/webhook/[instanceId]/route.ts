@@ -18,6 +18,12 @@ async function handleMessageUpsert(instanceId: string, data: any) {
     console.warn('Webhook "messages.upsert" recebido sem dados de mensagem ou chave válidos. Ignorando.', data);
     return;
   }
+
+  // Detect and ignore reaction messages for now
+  if (messageData.reactionMessage) {
+    console.log(`Reação recebida (${messageData.reactionMessage.text}) para a mensagem ${messageData.reactionMessage.key.id}. Ignorando.`);
+    return;
+  }
   
   const conversationId = key.remoteJid;
   const conversationRef = doc(db, 'conversations', conversationId);
