@@ -9,9 +9,23 @@ type RouteContext = {
   };
 };
 
+function getLiveLogUrl() {
+  // Prefer the production Vercel URL if available
+  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/live-log`;
+  }
+  // Fallback to the preview URL for development environments
+  if (process.env.NEXT_PUBLIC_WEB_PREVIEW_URL) {
+    return `${process.env.NEXT_PUBLIC_WEB_PREVIEW_URL}/api/live-log`;
+  }
+  // Default for local development
+  return 'http://localhost:9002/api/live-log';
+}
+
 async function notifyLiveLog(data: string) {
     // Fire-and-forget POST to the live log endpoint. No need to wait for it.
-    fetch(new URL('/api/live-log', process.env.NEXT_PUBLIC_WEB_PREVIEW_URL || 'http://localhost:9002').toString(), {
+    const liveLogUrl = getLiveLogUrl();
+    fetch(liveLogUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: data,

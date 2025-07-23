@@ -6,14 +6,22 @@ const clients = new Map<string, (data: string) => void>();
 
 function broadcast(data: string) {
   for (const send of clients.values()) {
-    send(data);
+    try {
+        // Attempt to parse and stringify to format the JSON nicely if possible
+        const parsedData = JSON.parse(data);
+        const prettyData = JSON.stringify(parsedData, null, 2);
+        send(prettyData);
+    } catch (e) {
+        // If it's not valid JSON, send the raw string
+        send(data);
+    }
   }
 }
 
 export async function GET(req: Request) {
   const stream = new ReadableStream({
     start(controller) {
-      const id = Date.now().toString();
+      const id = Date.now().toString() + Math.random();
       const send = (data: string) => {
         controller.enqueue(`data: ${data}\n\n`);
       };
@@ -21,7 +29,7 @@ export async function GET(req: Request) {
       clients.set(id, send);
       
       // Send a confirmation message on connection
-      send(JSON.stringify({ status: 'connected' }));
+      send(JSON.stringify({ status: 'connected', message: 'Live log stream started.'}));
 
       req.signal.addEventListener('abort', () => {
         clients.delete(id);
@@ -45,6 +53,7 @@ export async function POST(req: Request) {
     broadcast(data);
     return new Response('OK', { status: 200 });
   } catch (error) {
+    console.error("Error in live-log POST:", error);
     return new Response('Error reading request body', { status: 400 });
   }
 }
