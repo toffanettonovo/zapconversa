@@ -1,49 +1,105 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/icons';
-import Link from 'next/link';
-import Image from 'next/image';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+
+const formSchema = z.object({
+  email: z.string().email({ message: 'Por favor, insira um e-mail válido.' }),
+  password: z.string().min(6, { message: 'A senha deve ter pelo menos 6 caracteres.' }),
+});
 
 export default function LoginPage() {
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      router.push('/');
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        title: "Erro de autenticação",
+        description: "As credenciais fornecidas estão incorretas. Por favor, tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="absolute top-0 left-0 w-full h-[222px] bg-primary"></div>
-      <Card className="z-10 w-full max-w-4xl shadow-2xl">
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          <div className="p-8 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-8">
-                <Logo className="h-10 w-10 text-primary" />
-                <h1 className="text-2xl font-bold">WA MANAGER</h1>
-              </div>
-              <CardHeader className="p-0">
-                <CardTitle className="text-3xl font-bold tracking-tight">Use o WA Manager no seu computador</CardTitle>
-                <CardDescription className="text-muted-foreground mt-4 text-base">
-                  <ol className="list-decimal list-inside space-y-4">
-                    <li>Abra o WhatsApp no seu celular</li>
-                    <li>Toque em Menu ou Configurações e selecione Aparelhos conectados</li>
-                    <li>Aponte seu celular para esta tela para capturar o código</li>
-                  </ol>
-                </CardDescription>
-              </CardHeader>
-            </div>
-            <Link href="/" className="text-sm text-primary hover:underline mt-8">
-              Precisa de ajuda para começar?
-            </Link>
+      <Card className="z-10 w-full max-w-md shadow-2xl">
+        <CardHeader className="text-center">
+          <div className="flex justify-center items-center gap-3 mb-4">
+            <Logo className="h-10 w-10 text-primary" />
+            <h1 className="text-2xl font-bold">WA MANAGER</h1>
           </div>
-          <div className="flex items-center justify-center p-8 bg-secondary/30 rounded-r-lg">
-            <Link href="/">
-              <Image 
-                src="https://placehold.co/264x264.png" 
-                alt="QR Code" 
-                width={264} 
-                height={264}
-                className="rounded-lg"
-                data-ai-hint="qr code"
+          <CardTitle className="text-3xl font-bold tracking-tight">Acesse sua conta</CardTitle>
+          <CardDescription className="text-muted-foreground mt-2 text-base">
+            Use seu e-mail e senha para continuar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>E-mail</FormLabel>
+                    <FormControl>
+                      <Input placeholder="seu@email.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </Link>
-          </div>
-        </div>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Senha</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Sua senha" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Entrar
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
       </Card>
     </div>
   );
