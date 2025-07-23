@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Logo } from '@/components/icons';
+import { WhatsappLogo } from '@/components/icons';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -53,18 +53,15 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="absolute top-0 left-0 w-full h-[222px] bg-primary"></div>
-      <Card className="z-10 w-full max-w-md shadow-2xl">
-        <CardHeader className="text-center">
-          <div className="flex justify-center items-center gap-3 mb-4">
-            <Logo className="h-10 w-10 text-primary" />
-            <h1 className="text-2xl font-bold">WA MANAGER</h1>
-          </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">Acesse sua conta</CardTitle>
+      <Card className="z-10 w-full max-w-md shadow-lg">
+        <CardHeader className="text-center items-center">
+          <WhatsappLogo className="h-20 w-20 text-primary mb-4" />
+          <CardTitle className="text-3xl font-normal tracking-tight">WhatsApp Web</CardTitle>
           <CardDescription className="text-muted-foreground mt-2 text-base">
-            Use seu e-mail e senha para continuar.
+            Entre com sua conta para continuar
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-8 pt-0">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -72,9 +69,9 @@ export default function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>E-mail</FormLabel>
+                    <FormLabel className="text-sm font-light text-muted-foreground">Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="seu@email.com" {...field} />
+                      <Input placeholder="seu@email.com" {...field} className="bg-white border-gray-300 rounded-md" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -85,15 +82,15 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Senha</FormLabel>
+                    <FormLabel className="text-sm font-light text-muted-foreground">Senha</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Sua senha" {...field} />
+                      <Input type="password" placeholder="········" {...field} className="bg-white border-gray-300 rounded-md" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 rounded-md" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Entrar
               </Button>
