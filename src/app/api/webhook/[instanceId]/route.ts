@@ -17,19 +17,23 @@ export async function POST(request: Request, context: RouteContext) {
     // Attempt to get the raw body text. This itself can fail.
     rawBody = await request.text();
     let body;
+    let isJson = true;
 
     try {
       // Try to parse it as JSON.
       body = JSON.parse(rawBody);
     } catch (e) {
+      isJson = false;
       // If parsing fails, we log the raw text and a parsing error message.
       // This is a "controlled" failure, we still received something.
+      body = {
+        error: "Corpo recebido não é um JSON válido.",
+        rawBody: rawBody,
+      };
+      
       await addDoc(collection(db, 'webhook_logs'), {
         instanceId: instanceId,
-        payload: {
-          error: "Corpo recebido não é um JSON válido.",
-          rawBody: rawBody,
-        },
+        payload: body,
         receivedAt: serverTimestamp(),
         isError: true,
       });
