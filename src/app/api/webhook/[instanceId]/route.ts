@@ -10,8 +10,8 @@ type RouteContext = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
+  const { instanceId } = context.params;
   try {
-    const { instanceId } = context.params;
     const body = await request.json();
     
     console.log(`Webhook recebido para a instância ${instanceId}:`, JSON.stringify(body, null, 2));
@@ -25,16 +25,31 @@ export async function POST(request: Request, context: RouteContext) {
 
 
     return NextResponse.json({ status: 'ok', message: `Webhook para ${instanceId} recebido com sucesso` });
-  } catch (error) {
-    console.error('Erro ao processar webhook:', error);
+  } catch (error: unknown) {
+    console.error(`Erro ao processar webhook para ${instanceId}:`, error);
+    
+    let errorPayload: any = { message: 'An unknown error occurred.' };
     if (error instanceof Error) {
+        errorPayload = { 
+            message: error.message, 
+            stack: error.stack,
+            name: error.name,
+        };
+    } else {
+        errorPayload.details = error;
+    }
+
+    try {
         await addDoc(collection(db, 'webhook_logs'), {
-            instanceId: context.params.instanceId,
-            payload: { error: error.message, stack: error.stack },
+            instanceId: instanceId,
+            payload: { error: errorPayload },
             receivedAt: serverTimestamp(),
             isError: true,
         });
+    } catch (dbError) {
+        console.error('Falha ao salvar o log de erro no Firestore:', dbError);
     }
+    
     return new Response('Erro ao processar o webhook.', {
       status: 400,
     });
