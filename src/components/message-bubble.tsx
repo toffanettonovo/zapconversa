@@ -1,8 +1,9 @@
 import { type Message } from '@/lib/data';
 import { cn } from '@/lib/utils';
-import { CheckCheck } from 'lucide-react';
+import { CheckCheck, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { Button } from './ui/button';
 
 
 type MessageBubbleProps = {
@@ -42,11 +43,31 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
       );
     }
 
+    if (message.messageType === 'document' && message.mediaUrl) {
+      return (
+        <div className="flex items-center gap-3 p-2">
+            <FileText className="h-10 w-10 text-gray-400" />
+            <div className="flex flex-col">
+                <p className="text-sm font-medium text-white">{message.mediaName || 'Documento'}</p>
+                <a 
+                    href={message.mediaUrl} 
+                    download={message.mediaName || 'document'} 
+                    className="text-xs text-blue-400 hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                  Baixar
+                </a>
+            </div>
+        </div>
+      );
+    }
+
     return <p className="text-sm text-white">{message.text}</p>;
   };
   
   const renderCaption = () => {
-    if ((message.messageType === 'image' || message.messageType === 'video') && message.text) {
+    if ((message.messageType === 'image' || message.messageType === 'video' || message.messageType === 'document') && message.text) {
         return <p className="text-sm text-white mt-1">{message.text}</p>;
     }
     return null;

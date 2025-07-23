@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { Conversation } from '@/lib/data';
 import { cn } from '@/lib/utils';
-import { ImageIcon, Mic, Settings } from 'lucide-react';
+import { ImageIcon, Mic, Settings, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 type ConversationItemProps = {
@@ -40,6 +40,7 @@ const getIconForLastMessage = (conversation: Conversation) => {
     if (!conversation.lastMessage) return null;
     if (conversation.lastMessage.toLowerCase().includes('foto')) return <ImageIcon className="h-4 w-4 mr-1 text-gray-400" />;
     if (conversation.lastMessage.toLowerCase().includes('áudio')) return <Mic className="h-4 w-4 mr-1 text-gray-400" />;
+    if (conversation.lastMessage.toLowerCase().startsWith('documento:')) return <FileText className="h-4 w-4 mr-1 text-gray-400" />;
     return null;
 }
 
@@ -51,6 +52,10 @@ export default function ConversationItem({ conversation, isSelected, onSelect }:
     // This prevents the server-rendered timestamp from mismatching the client-rendered one.
     setDisplayTimestamp(formatTimestamp(conversation.timestamp));
   }, [conversation.timestamp]);
+
+  const lastMessageText = conversation.lastMessage.toLowerCase().startsWith('documento:') 
+    ? conversation.lastMessage.substring(10).trim()
+    : conversation.lastMessage;
 
   return (
     <div
@@ -77,7 +82,7 @@ export default function ConversationItem({ conversation, isSelected, onSelect }:
         <div className="flex justify-between items-center mt-1">
           <div className="text-sm truncate max-w-[80%] flex items-center">
             {getIconForLastMessage(conversation)}
-            <span className={cn(isSelected ? 'text-white/90' : 'text-gray-400')}>{conversation.lastMessage}</span>
+            <span className={cn(isSelected ? 'text-white/90' : 'text-gray-400')}>{lastMessageText}</span>
           </div>
           {conversation.unreadCount != null && conversation.unreadCount > 0 && !isSelected && (
             <Badge className="bg-[#00a884] text-white h-5 w-5 p-0 flex items-center justify-center text-xs">

@@ -26,6 +26,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
   let messageText = '[Mídia não suportada]';
   let messageType = 'unsupported';
   let mediaUrl = null;
+  let mediaName = undefined;
 
   if (messageData.conversation) {
     messageText = messageData.conversation;
@@ -34,7 +35,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
     messageText = messageData.extendedTextMessage.text;
     messageType = 'text';
   } else if (messageData.audioMessage) {
-    messageText = ''; // O texto é vazio, pois teremos a URL da mídia
+    messageText = '';
     messageType = 'audio';
     const mediaResult = await getMediaAsDataUri(instanceId, key, messageData);
     if(mediaResult.dataUri) {
@@ -45,6 +46,14 @@ async function handleMessageUpsert(instanceId: string, data: any) {
     messageType = 'image';
     const mediaResult = await getMediaAsDataUri(instanceId, key, messageData);
     if(mediaResult.dataUri) {
+      mediaUrl = mediaResult.dataUri;
+    }
+  } else if (messageData.documentMessage) {
+    messageText = messageData.documentMessage.caption || '';
+    messageType = 'document';
+    mediaName = messageData.documentMessage.fileName || 'document.pdf';
+    const mediaResult = await getMediaAsDataUri(instanceId, key, messageData);
+    if (mediaResult.dataUri) {
       mediaUrl = mediaResult.dataUri;
     }
   } else if (messageData.videoMessage) {
@@ -61,6 +70,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
   if (messageType === 'image') lastMessageLabel = 'Foto';
   if (messageType === 'video') lastMessageLabel = 'Vídeo';
   if (messageType === 'sticker') lastMessageLabel = 'Figurinha';
+  if (messageType === 'document') lastMessageLabel = `Documento: ${mediaName}`;
 
 
   await addDoc(messagesCollectionRef, {
@@ -73,6 +83,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
     instanceId: instanceId,
     messageType: messageType,
     mediaUrl: mediaUrl,
+    mediaName: mediaName,
   });
 
   const conversationDocSnap = await getDoc(conversationRef);

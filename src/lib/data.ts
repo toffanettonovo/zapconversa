@@ -3,8 +3,9 @@ export type Message = {
   text: string;
   sender: 'me' | 'them';
   timestamp: any; // Can be Firestore Timestamp or a string
-  messageType?: 'text' | 'image' | 'audio' | 'video' | 'sticker' | 'unsupported';
+  messageType?: 'text' | 'image' | 'audio' | 'video' | 'sticker' | 'document' | 'unsupported';
   mediaUrl?: string | null;
+  mediaName?: string;
 };
 
 export type Conversation = {

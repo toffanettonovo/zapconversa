@@ -87,6 +87,8 @@ export async function getMediaAsDataUri(instanceId: string, messageKey: any, mes
         mimeType = messageData.audioMessage.mimetype || 'audio/ogg';
       } else if (messageData.imageMessage) {
         mimeType = messageData.imageMessage.mimetype || 'image/jpeg';
+      } else if (messageData.documentMessage) {
+        mimeType = messageData.documentMessage.mimetype || 'application/pdf';
       }
 
       const dataUri = `data:${mimeType};base64,${result.base64}`;
