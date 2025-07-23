@@ -129,23 +129,31 @@ export async function sendTextMessage(instanceId: string, number: string, text: 
       cache: 'no-store',
     });
     
-    // Tenta ler o corpo da resposta independentemente do status
-    const responseData = await response.json().catch(() => response.text());
-
     if (!response.ok) {
-      console.error('API Error Response:', responseData);
-      // Tenta extrair a mensagem de erro de várias estruturas possíveis
-      const errorMessage = 
-          (typeof responseData === 'object' && responseData !== null)
-              ? responseData.message || responseData.error || (responseData.response && responseData.response.message) || JSON.stringify(responseData)
-              : responseData; // se for texto, usa o texto
-      throw new Error(`Falha ao enviar mensagem: ${errorMessage}`);
+        let errorBody = 'Falha ao ler o corpo do erro da API.';
+        try {
+            // Clona a resposta para poder ler o corpo duas vezes se necessário
+            const clonedResponse = response.clone();
+            // Tenta ler como JSON primeiro
+            const jsonError = await clonedResponse.json().catch(() => null);
+            if (jsonError && (jsonError.message || jsonError.error)) {
+                errorBody = `API Error: ${jsonError.message || jsonError.error}`;
+            } else {
+                 // Se não for JSON ou não tiver um campo de mensagem, lê como texto
+                 errorBody = await response.text();
+            }
+        } catch (e) {
+            console.error("Could not parse error response body:", e);
+        }
+        console.error(`API Error Response [${response.status}]:`, errorBody);
+        throw new Error(`Falha ao enviar mensagem. Status: ${response.status}. Detalhes: ${errorBody}`);
     }
 
-    return responseData;
+    return await response.json();
+    
   } catch (error) {
-    console.error('Erro na chamada da API da Evolution para enviar texto:', error);
-    // Re-lança o erro para que a Server Action possa capturá-lo
+    console.error('Erro fatal na chamada da API da Evolution para enviar texto:', error);
+    // Re-lança o erro para que a Server Action possa capturá-lo com a mensagem completa
     throw error;
   }
 }
