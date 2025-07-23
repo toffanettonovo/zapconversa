@@ -14,6 +14,7 @@ import { InstanceForm } from './instance-form';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import WebhookLogs from './webhook-logs';
+import { testWebhookAction } from '@/lib/actions';
 
 export default function AdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
@@ -66,55 +67,35 @@ export default function AdminPanel() {
   }, [toast]);
   
   const handleTestWebhook = async (instanceId: string) => {
-    if (!NGROK_URL) {
-      toast({
-        title: 'URL do ngrok não configurada',
-        description: 'A URL fixa do ngrok não está definida no sistema.',
-        variant: 'destructive',
-      });
-      return;
+    const instance = instances.find(inst => inst.id === instanceId);
+    if (!instance) {
+        toast({ title: 'Erro', description: 'Instância não encontrada.', variant: 'destructive' });
+        return;
     }
     
-    const finalWebhookUrl = `${NGROK_URL}/api/webhook/${instanceId}`;
-    const instance = instances.find(inst => inst.id === instanceId);
-
-
     setIsTestingWebhook(instanceId);
+
     try {
-      const response = await fetch(finalWebhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify([{
-          event: `testFromInstanceButton-${instanceId}`,
-          data: { message: `Este é um teste do painel de administração para a instância ${instance?.name}.` },
-          instance: instance?.name
-        }]),
-      });
+        const result = await testWebhookAction(instanceId, instance.name);
+        
+        if (result.success) {
+            toast({
+                title: 'Teste de Webhook Enviado',
+                description: `Webhook enviado com sucesso. Resposta: ${result.message}`,
+            });
+        } else {
+            throw new Error(result.error);
+        }
 
-      if (!response.ok) {
-        let errorBody = 'Falha ao ler o corpo do erro.';
-        try {
-            errorBody = await response.text();
-        } catch {}
-        throw new Error(`O servidor respondeu com status ${response.status}. Detalhes: ${errorBody}`);
-      }
-
-      const result = await response.json();
-      toast({
-        title: 'Teste de Webhook Enviado',
-        description: `Webhook enviado para ${finalWebhookUrl}. Resposta: ${JSON.stringify(result)}`,
-      });
     } catch (error: any) {
-      console.error(error);
-      toast({
-        title: 'Erro ao Testar Webhook',
-        description: error.message,
-        variant: 'destructive',
-      });
+        console.error(error);
+        toast({
+            title: 'Erro ao Testar Webhook',
+            description: error.message,
+            variant: 'destructive',
+        });
     } finally {
-      setIsTestingWebhook(null);
+        setIsTestingWebhook(null);
     }
   };
 
@@ -193,7 +174,7 @@ export default function AdminPanel() {
     try {
       const dataWithWebhook = {
         ...instanceData,
-        webhookUrl: NGROK_URL,
+        webhookUrl: NGROK_URL, // Always use the fixed ngrok URL
       };
 
       if (instanceData.id) { // Editing

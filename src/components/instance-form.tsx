@@ -115,7 +115,7 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
               )}
             />
              <div className="space-y-2">
-                <Label>URL Final do Webhook (Gerada Automaticamente)</Label>
+                <Label>URL do Webhook (Gerada Automaticamente)</Label>
                 <div className="flex items-center gap-2">
                   <Input 
                     value={instance ? `${NGROK_URL}/api/webhook/${instance.id}` : 'Salve a instância para gerar a URL'} 
@@ -126,7 +126,7 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
                       <Copy className="h-4 w-4" />
                    </Button>
                 </div>
-                <p className="text-xs text-gray-500">Use esta URL final na sua plataforma da Evolution API.</p>
+                <p className="text-xs text-gray-500">Use esta URL na sua plataforma da Evolution API.</p>
              </div>
             <FormField
               control={form.control}
