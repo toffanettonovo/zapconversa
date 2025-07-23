@@ -8,22 +8,23 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { type Instance } from '@/lib/data';
 
 const formSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório.'),
   apiUrl: z.string().url('A URL da API é inválida.'),
-  webhook: z.string().url('A URL do Webhook é inválida.'),
-  status: z.enum(['connected', 'disconnected']),
+  apiKey: z.string().min(1, 'A chave da API é obrigatória.'),
+  webhookUrl: z.string().url('A URL do Webhook é inválida.'),
+  isActive: z.boolean(),
 });
 
 type InstanceFormProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (instance: Omit<Instance, 'id'> | Instance) => void;
+  onSave: (instance: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity'> | (Omit<Instance, 'createdAt' | 'updatedAt' | 'lastActivity'> & { id: string })) => void;
   instance?: Instance;
 };
 
@@ -33,8 +34,9 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
     defaultValues: instance || {
       name: '',
       apiUrl: '',
-      webhook: '',
-      status: 'disconnected',
+      apiKey: '',
+      webhookUrl: '',
+      isActive: true,
     },
   });
 
@@ -42,10 +44,11 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
     form.reset(instance || {
       name: '',
       apiUrl: '',
-      webhook: '',
-      status: 'disconnected',
+      apiKey: '',
+      webhookUrl: '',
+      isActive: true,
     });
-  }, [instance, form]);
+  }, [instance, form, isOpen]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     onSave(instance ? { ...instance, ...values } : values);
@@ -88,14 +91,27 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
                 </FormItem>
               )}
             />
-             <FormField
+            <FormField
               control={form.control}
-              name="webhook"
+              name="apiKey"
               render={({ field }) => (
                 <FormItem>
-                  <Label htmlFor="webhook">Webhook</Label>
+                  <Label htmlFor="apiKey">Chave da API</Label>
                   <FormControl>
-                    <Input id="webhook" {...field} className="bg-[#2a3942] border-none" />
+                    <Input id="apiKey" {...field} className="bg-[#2a3942] border-none" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="webhookUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <Label htmlFor="webhookUrl">Webhook URL</Label>
+                  <FormControl>
+                    <Input id="webhookUrl" {...field} className="bg-[#2a3942] border-none" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -103,22 +119,19 @@ export function InstanceForm({ isOpen, onOpenChange, onSave, instance }: Instanc
             />
             <FormField
               control={form.control}
-              name="status"
+              name="isActive"
               render={({ field }) => (
-                <FormItem>
-                  <Label>Status</Label>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="bg-[#2a3942] border-none">
-                        <SelectValue placeholder="Selecione o status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="bg-[#111b21] border-[#1f2c33] text-white">
-                      <SelectItem value="connected" className="hover:!bg-[#2a3942]">Conectado</SelectItem>
-                      <SelectItem value="disconnected" className="hover:!bg-[#2a3942]">Desconectado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-[#2a3942] border-none">
+                  <div className="space-y-0.5">
+                    <FormLabel>Ativa</FormLabel>
+                    <FormMessage />
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

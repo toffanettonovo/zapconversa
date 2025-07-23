@@ -6,7 +6,7 @@ import { type User, type Instance } from '@/lib/data';
 import { Badge } from './ui/badge';
 import { Circle, Loader2, PlusCircle, Trash2, Edit } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, QuerySnapshot, DocumentData, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, QuerySnapshot, DocumentData, addDoc, updateDoc, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { UserForm } from './user-form';
@@ -56,7 +56,7 @@ export default function AdminPanel() {
     };
   }, []);
 
-  const handleSaveUser = async (userData: Omit<User, 'id' | 'avatar'> & { password?: string }) => {
+  const handleSaveUser = async (userData: Omit<User, 'id'> & { id?: string; password?: string }) => {
     try {
       if (userData.id) { // Editing an existing user
         const userRef = doc(db, 'users', userData.id);
@@ -106,18 +106,34 @@ export default function AdminPanel() {
     }
   };
 
-  const handleSaveInstance = async (instance: Omit<Instance, 'id'> | Instance) => {
+  const handleSaveInstance = async (instanceData: Omit<Instance, 'id' | 'createdAt' | 'updatedAt' | 'lastActivity'> & { id?: string }) => {
     try {
-      if ('id' in instance) {
-        const instanceRef = doc(db, 'instances', instance.id);
-        const { id, ...instanceData } = instance;
-        await updateDoc(instanceRef, instanceData);
-      } else {
-        await addDoc(collection(db, 'instances'), instance);
+      if (instanceData.id) { // Editing
+        const instanceRef = doc(db, 'instances', instanceData.id);
+        const { id, ...updateData } = instanceData;
+        await updateDoc(instanceRef, {
+          ...updateData,
+          updatedAt: serverTimestamp(),
+        });
+        toast({ title: "Sucesso", description: "Instância atualizada." });
+      } else { // Creating
+        await addDoc(collection(db, 'instances'), {
+          ...instanceData,
+          lastActivity: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        toast({ title: "Sucesso", description: "Instância criada." });
       }
       setIsInstanceFormOpen(false);
-    } catch (error) {
+      setSelectedInstance(undefined);
+    } catch (error: any) {
       console.error("Error saving instance: ", error);
+      toast({
+        title: "Erro ao salvar instância",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -125,8 +141,14 @@ export default function AdminPanel() {
     if (window.confirm('Tem certeza que deseja excluir esta instância?')) {
       try {
         await deleteDoc(doc(db, 'instances', instanceId));
-      } catch (error) {
+        toast({ title: "Sucesso", description: "Instância excluída." });
+      } catch (error: any) {
         console.error("Error deleting instance: ", error);
+         toast({
+          title: "Erro ao excluir instância",
+          description: error.message,
+          variant: "destructive",
+        });
       }
     }
   };
@@ -145,7 +167,10 @@ export default function AdminPanel() {
       />
       <InstanceForm
         isOpen={isInstanceFormOpen}
-        onOpenChange={setIsInstanceFormOpen}
+        onOpenChange={(isOpen) => {
+            setIsInstanceFormOpen(isOpen);
+            if (!isOpen) setSelectedInstance(undefined);
+        }}
         onSave={handleSaveInstance}
         instance={selectedInstance}
       />
@@ -183,7 +208,7 @@ export default function AdminPanel() {
                       <TableHead className="text-gray-400">Nome</TableHead>
                       <TableHead className="text-gray-400">Email</TableHead>
                       <TableHead className="text-gray-400">Função</TableHead>
-                      <TableHead className="text-gray-400">Instância</TableHead>
+                      <TableHead className="text-gray-400">ID da Instância</TableHead>
                       <TableHead className="text-right text-gray-400">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -197,7 +222,7 @@ export default function AdminPanel() {
                             {user.role}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-gray-300">{user.instance}</TableCell>
+                        <TableCell className="text-gray-300">{user.instanceId}</TableCell>
                         <TableCell className="text-right">
                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" onClick={() => { setSelectedUser(user); setIsUserFormOpen(true); }}>
                             <Edit className="h-4 w-4" />
@@ -251,11 +276,11 @@ export default function AdminPanel() {
                       <TableRow key={instance.id} className="border-[#1f2c33] hover:bg-[#1f2c33]">
                         <TableCell className="font-medium text-white">{instance.name}</TableCell>
                         <TableCell className="text-gray-300">{instance.apiUrl}</TableCell>
-                        <TableCell className="text-gray-300">{instance.webhook}</TableCell>
+                        <TableCell className="text-gray-300">{instance.webhookUrl}</TableCell>
                         <TableCell>
-                          <Badge variant={instance.status === 'connected' ? 'default' : 'destructive'} className={`flex items-center gap-2 w-fit ${instance.status === 'connected' ? 'bg-green-600' : 'bg-red-600'} text-white`}>
-                            <Circle className={`h-2 w-2 ${instance.status === 'connected' ? 'fill-green-400' : 'fill-red-400'}`} />
-                            {instance.status === 'connected' ? 'Conectado' : 'Desconectado'}
+                          <Badge variant={instance.isActive ? 'default' : 'destructive'} className={`flex items-center gap-2 w-fit ${instance.isActive ? 'bg-green-600' : 'bg-red-600'} text-white`}>
+                            <Circle className={`h-2 w-2 ${instance.isActive ? 'fill-green-400' : 'fill-red-400'}`} />
+                            {instance.isActive ? 'Ativo' : 'Inativo'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">

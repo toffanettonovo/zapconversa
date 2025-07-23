@@ -20,7 +20,7 @@ export type User = {
   name: string;
   email: string;
   role: 'admin' | 'user';
-  instance: string;
+  instanceId: string;
   avatar?: string;
 };
 
@@ -28,8 +28,12 @@ export type Instance = {
   id: string;
   name: string;
   apiUrl: string;
-  webhook: string;
-  status: 'connected' | 'disconnected';
+  apiKey: string;
+  webhookUrl: string;
+  isActive: boolean;
+  lastActivity?: any; // Firestore Timestamp
+  createdAt?: any; // Firestore Timestamp
+  updatedAt?: any; // Firestore Timestamp
 };
 
 
