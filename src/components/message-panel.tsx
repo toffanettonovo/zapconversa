@@ -66,16 +66,35 @@ export default function MessagePanel({ conversation }: MessagePanelProps) {
     if (!messageText.trim() || !conversation || !conversation.instanceId) return;
 
     setIsSending(true);
+
+    const optimisticMessage: Message = {
+      id: `local-${Date.now()}`,
+      text: messageText,
+      sender: 'me',
+      timestamp: formatMessageTimestamp(new Date()),
+      messageType: 'text',
+    };
+
     try {
+      // Temporarily add the message to the UI
+      // setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+
       const result = await sendTextMessageAction(conversation.instanceId, conversation.id, messageText);
+      
       if (result.success) {
+        // Clear the input field
         setMessageText('');
+        // The webhook will handle adding the message to Firestore, which will then update the UI.
+        // If we want instant UI update without waiting for webhook, we can add it here.
+        // But let's rely on webhook for consistency.
       } else {
         toast({
           title: 'Erro ao Enviar Mensagem',
           description: result.error || 'Não foi possível enviar a mensagem.',
           variant: 'destructive'
         });
+        // Remove the optimistic message if sending failed
+        // setMessages(prevMessages => prevMessages.filter(msg => msg.id !== optimisticMessage.id));
       }
     } catch (error: any) {
       toast({
@@ -83,6 +102,8 @@ export default function MessagePanel({ conversation }: MessagePanelProps) {
           description: 'Ocorreu um erro ao tentar se comunicar com o servidor.',
           variant: 'destructive'
       });
+      // Remove the optimistic message if sending failed
+     // setMessages(prevMessages => prevMessages.filter(msg => msg.id !== optimisticMessage.id));
     } finally {
       setIsSending(false);
     }
