@@ -1,7 +1,8 @@
 // src/app/api/webhook/[instanceId]/route.ts
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc, getDoc, query, where, getDocs, limit } from 'firebase/firestore';
+import { getProfilePicUrl } from '@/services/evolution-api';
 
 type RouteContext = {
   params: {
@@ -38,14 +39,16 @@ async function handleMessageUpsert(instanceId: string, data: any) {
   });
 
   // 2. Criar ou atualizar o documento da conversa principal
-  const conversationDoc = await getDocs(query(collection(db, 'conversations'), where('id', '==', conversationId), limit(1)));
+  const conversationDocSnap = await getDoc(conversationRef);
 
-  if (conversationDoc.empty) {
+  if (!conversationDocSnap.exists()) {
     // Se a conversa não existe, cria
+    const profilePicUrl = await getProfilePicUrl(instanceId, conversationId);
+
     await setDoc(conversationRef, {
       id: conversationId,
       name: data.pushName || conversationId, // Usa o pushName se disponível
-      avatar: 'https://placehold.co/40x40.png',
+      avatar: profilePicUrl || 'https://placehold.co/40x40.png',
       'data-ai-hint': 'person avatar',
       lastMessage: messageText,
       timestamp: serverTimestamp(),
@@ -60,9 +63,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
       // Aqui teríamos uma lógica para incrementar `unreadCount` se necessário
     });
   }
-
 }
-
 
 export async function POST(request: Request, context: RouteContext) {
   const { instanceId } = context.params;
