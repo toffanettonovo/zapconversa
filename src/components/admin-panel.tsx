@@ -18,6 +18,8 @@ import { testWebhookAction } from '@/lib/actions';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 
+const NGROK_STORAGE_KEY = 'ngrok_base_url';
+
 export default function AdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
   const [instances, setInstances] = useState<Instance[]>([]);
@@ -25,7 +27,7 @@ export default function AdminPanel() {
   const [loadingInstances, setLoadingInstances] = useState(true);
   const [isTestingWebhook, setIsTestingWebhook] = useState<string | null>(null);
 
-  const [ngrokUrl, setNgrokUrl] = useState(FALLBACK_NGROK_URL);
+  const [ngrokUrl, setNgrokUrl] = useState('');
   
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [isInstanceFormOpen, setIsInstanceFormOpen] = useState(false);
@@ -37,6 +39,10 @@ export default function AdminPanel() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Load ngrok URL from localStorage on initial render
+    const storedUrl = localStorage.getItem(NGROK_STORAGE_KEY);
+    setNgrokUrl(storedUrl || FALLBACK_NGROK_URL);
+  
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), 
       (snapshot: QuerySnapshot<DocumentData>) => {
         const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
@@ -68,6 +74,11 @@ export default function AdminPanel() {
       unsubscribeInstances();
     };
   }, [toast]);
+  
+  const handleNgrokUrlChange = (newUrl: string) => {
+    setNgrokUrl(newUrl);
+    localStorage.setItem(NGROK_STORAGE_KEY, newUrl);
+  };
   
   const handleTestWebhook = async (instanceId: string) => {
     if (!ngrokUrl) {
@@ -342,13 +353,13 @@ export default function AdminPanel() {
                 <div className="mb-6 p-4 rounded-lg border border-[#2a3942] bg-[#202c33] space-y-2">
                     <Label htmlFor="ngrok-url" className="flex items-center gap-2 text-base font-semibold text-white">
                         <Server className="h-5 w-5 text-gray-400" />
-                        URL Base do ngrok
+                        URL Base do ngrok (Persistente)
                     </Label>
-                    <p className="text-sm text-gray-400">Cole a URL gerada pelo ngrok aqui. Ela será usada para construir o webhook de todas as instâncias abaixo.</p>
+                    <p className="text-sm text-gray-400">Cole a URL gerada pelo ngrok aqui. Ela será usada para construir o webhook de todas as instâncias e será salva no seu navegador.</p>
                     <Input 
                         id="ngrok-url"
                         value={ngrokUrl}
-                        onChange={(e) => setNgrokUrl(e.target.value)}
+                        onChange={(e) => handleNgrokUrlChange(e.target.value)}
                         placeholder="Ex: https://abcdef123.ngrok-free.app"
                         className="bg-[#2a3942] border-none"
                     />
@@ -375,7 +386,7 @@ export default function AdminPanel() {
                         <TableCell className="text-gray-300">{instance.apiUrl}</TableCell>
                         <TableCell className="text-gray-300 text-xs">
                           <div className="flex items-center gap-2">
-                             <span>{`${ngrokUrl || '...'}/api/webhook/${instance.id}`}</span>
+                             <span>{ngrokUrl ? `${ngrokUrl}/api/webhook/${instance.id}` : '...'}</span>
                              <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white" onClick={() => handleCopyWebhook(instance.id)}>
                                 <Copy className="h-3 w-3" />
                              </Button>
@@ -418,5 +429,3 @@ export default function AdminPanel() {
     </div>
   );
 }
-
-    
