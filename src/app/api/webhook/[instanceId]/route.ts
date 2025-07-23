@@ -15,7 +15,7 @@ async function handleMessageUpsert(instanceId: string, data: any) {
   const key = data.key;
   
   if (!messageData || !key || !key.remoteJid) {
-    console.warn('Webhook "messages.upsert" recebido sem dados de mensagem ou chave válidos.', data);
+    console.warn('Webhook "messages.upsert" recebido sem dados de mensagem ou chave válidos. Ignorando.', data);
     return;
   }
   
