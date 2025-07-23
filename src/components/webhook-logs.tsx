@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { AnimatePresence, motion } from 'framer-motion';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 
@@ -21,7 +21,7 @@ interface LogEntry {
 function formatTimestamp(timestamp: any): string {
     if (!timestamp) return '...';
     // a data do firestore pode vir como um objeto com seconds e nanoseconds
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
      return new Date(date).toLocaleString('pt-BR', {
         day: '2-digit',
         month: '2-digit',

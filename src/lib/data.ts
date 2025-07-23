@@ -2,7 +2,7 @@ export type Message = {
   id: string;
   text: string;
   sender: 'me' | 'them';
-  timestamp: string;
+  timestamp: any; // Can be Firestore Timestamp or a string
 };
 
 export type Conversation = {

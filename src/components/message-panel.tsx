@@ -10,12 +10,19 @@ import AdminPanel from './admin-panel';
 import ConversationSummary from './conversation-summary';
 import { WhatsappLogo } from './icons';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type MessagePanelProps = {
   conversation: Conversation | undefined;
 };
+
+function formatMessageTimestamp(timestamp: any): string {
+    if (!timestamp) return '';
+    const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 
 export default function MessagePanel({ conversation }: MessagePanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -29,7 +36,14 @@ export default function MessagePanel({ conversation }: MessagePanelProps) {
       const q = query(messagesCollectionRef, orderBy('timestamp', 'asc'));
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+        const msgs = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return { 
+                id: doc.id, 
+                ...data,
+                timestamp: formatMessageTimestamp(data.timestamp),
+            } as Message
+        });
         setMessages(msgs);
         setLoading(false);
       }, (error) => {

@@ -18,7 +18,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
       >
         <p className="text-sm text-white">{message.text}</p>
         <div className={cn('flex items-center justify-end text-xs mt-1', isMine ? 'text-gray-400' : 'text-gray-500')}>
-          <span>{message.timestamp}</span>
+          <span>{message.timestamp as string}</span>
           {isMine && <CheckCheck className="h-4 w-4 ml-1 text-[#53bdeb]" />}
         </div>
       </div>
