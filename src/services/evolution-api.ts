@@ -22,18 +22,17 @@ export async function getProfilePicUrl(instanceId: string, remoteJid: string): P
   }
 
   const { apiUrl, apiKey, name: instanceName } = instance;
-  // Endpoint e método corretos, conforme o curl funcional
   const endpoint = `${apiUrl}/chat/fetchProfilePictureUrl/${instanceName}`;
-  const phoneNumber = remoteJid.split('@')[0]; // Remove o sufixo @s.whatsapp.net
+  const phoneNumber = remoteJid.split('@')[0];
 
   try {
     const response = await fetch(endpoint, {
-      method: 'POST', // Método correto é POST
+      method: 'POST',
       headers: {
         'apikey': apiKey,
-        'Content-Type': 'application/json', // Header necessário para o POST
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ number: phoneNumber }), // Corpo da requisição com o número
+      body: JSON.stringify({ number: phoneNumber }),
       cache: 'no-store',
     });
 
@@ -47,11 +46,50 @@ export async function getProfilePicUrl(instanceId: string, remoteJid: string): P
     }
     
     const data = await response.json();
-    // A resposta contém a URL no campo profilePictureUrl
     return data?.profilePictureUrl || null;
 
   } catch (error) {
     console.error('Erro na chamada da API da Evolution para buscar foto de perfil:', error);
     return null;
+  }
+}
+
+export async function getMediaAsDataUri(instanceId: string, messageKey: any, messageData: any): Promise<{ dataUri: string | null; mimeType: string | null }> {
+  const instance = await getInstance(instanceId);
+  if (!instance || !instance.isActive) {
+    console.error(`Não foi possível obter os detalhes da instância ou ela está inativa: ${instanceId}`);
+    return { dataUri: null, mimeType: null };
+  }
+
+  const { apiUrl, apiKey, name: instanceName } = instance;
+  const endpoint = `${apiUrl}/chat/getBase64FromMediaMessage/${instanceName}`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'apikey': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: { key: messageKey } }),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Erro ${response.status} ao buscar mídia: ${errorData}`);
+    }
+
+    const result = await response.json();
+    if (result.base64) {
+      const mimeType = messageData.audioMessage?.mimetype || 'audio/ogg';
+      const dataUri = `data:${mimeType};base64,${result.base64}`;
+      return { dataUri, mimeType };
+    }
+    return { dataUri: null, mimeType: null };
+
+  } catch (error) {
+    console.error('Erro na chamada da API da Evolution para buscar mídia:', error);
+    return { dataUri: null, mimeType: null };
   }
 }

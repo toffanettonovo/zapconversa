@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc, getDoc, query, where, getDocs, limit } from 'firebase/firestore';
-import { getProfilePicUrl } from '@/services/evolution-api';
+import { getProfilePicUrl, getMediaAsDataUri } from '@/services/evolution-api';
 
 type RouteContext = {
   params: {
@@ -16,68 +16,80 @@ async function handleMessageUpsert(instanceId: string, data: any) {
   
   if (!messageData || !key || !key.remoteJid) {
     console.warn('Webhook "messages.upsert" recebido sem dados de mensagem ou chave válidos.', data);
-    return; // Ignora se não for uma mensagem válida
+    return;
   }
   
-  // A "conversa" é com o contato externo.
   const conversationId = key.remoteJid;
   const conversationRef = doc(db, 'conversations', conversationId);
   const messagesCollectionRef = collection(conversationRef, 'messages');
 
-  // Extrai o texto da mensagem (pode estar em `conversation` ou `extendedTextMessage.text` ou ser um tipo de mídia)
   let messageText = '[Mídia não suportada]';
+  let messageType = 'unsupported';
+  let mediaUrl = null;
+
   if (messageData.conversation) {
     messageText = messageData.conversation;
+    messageType = 'text';
   } else if (messageData.extendedTextMessage?.text) {
     messageText = messageData.extendedTextMessage.text;
+    messageType = 'text';
   } else if (messageData.audioMessage) {
-    messageText = 'Áudio';
+    messageText = ''; // O texto é vazio, pois teremos a URL da mídia
+    messageType = 'audio';
+    const mediaResult = await getMediaAsDataUri(instanceId, key, messageData);
+    if(mediaResult.dataUri) {
+      mediaUrl = mediaResult.dataUri;
+    }
   } else if (messageData.imageMessage) {
-    messageText = 'Foto';
+    messageText = messageData.imageMessage.caption || 'Foto';
+    messageType = 'image';
   } else if (messageData.videoMessage) {
-    messageText = 'Vídeo';
+    messageText = messageData.videoMessage.caption || 'Vídeo';
+    messageType = 'video';
   } else if (messageData.stickerMessage) {
     messageText = 'Figurinha';
+    messageType = 'sticker';
   }
 
+  // Label para a lista de conversas
+  let lastMessageLabel = messageText;
+  if (messageType === 'audio') lastMessageLabel = 'Áudio';
+  if (messageType === 'image') lastMessageLabel = 'Foto';
+  if (messageType === 'video') lastMessageLabel = 'Vídeo';
+  if (messageType === 'sticker') lastMessageLabel = 'Figurinha';
 
-  // 1. Salvar a nova mensagem na subcoleção
+
   await addDoc(messagesCollectionRef, {
     text: messageText,
     sender: key.fromMe ? 'me' : 'them',
-    timestamp: serverTimestamp(), // Usar o timestamp do servidor para ordenação
-    messageTimestamp: data.messageTimestamp ? new Date(data.messageTimestamp * 1000) : new Date(), // Timestamp original
+    timestamp: serverTimestamp(),
+    messageTimestamp: data.messageTimestamp ? new Date(data.messageTimestamp * 1000) : new Date(),
     fromMe: key.fromMe,
     messageId: key.id,
-    instanceId: instanceId, // Associa a mensagem à instância
+    instanceId: instanceId,
+    messageType: messageType,
+    mediaUrl: mediaUrl,
   });
 
-  // 2. Criar ou atualizar o documento da conversa principal
   const conversationDocSnap = await getDoc(conversationRef);
 
   if (!conversationDocSnap.exists()) {
-    // Se a conversa não existe, primeiro busca a foto de perfil
     const profilePicUrl = await getProfilePicUrl(instanceId, conversationId);
-
-    // Depois, cria o documento com a foto (ou um placeholder)
     await setDoc(conversationRef, {
       id: conversationId,
-      name: data.pushName || conversationId, // Usa o pushName se disponível
+      name: data.pushName || conversationId,
       avatar: profilePicUrl || 'https://placehold.co/40x40.png',
       'data-ai-hint': 'person avatar',
-      lastMessage: messageText,
+      lastMessage: lastMessageLabel,
       timestamp: serverTimestamp(),
-      unreadCount: key.fromMe ? 0 : 1, // Só incrementa se a mensagem não for minha
-      instanceId: instanceId, // Associa a conversa à instância
+      unreadCount: key.fromMe ? 0 : 1,
+      instanceId: instanceId,
     });
   } else {
-    // Se a conversa já existe, prepara a atualização
     const updateData: any = {
-      lastMessage: messageText,
+      lastMessage: lastMessageLabel,
       timestamp: serverTimestamp(),
     };
-
-    // Verifica se o avatar atual é um placeholder antes de tentar buscar um novo
     const currentData = conversationDocSnap.data();
     if (currentData && currentData.avatar && currentData.avatar.includes('placehold.co')) {
         const newAvatarUrl = await getProfilePicUrl(instanceId, conversationId);
@@ -85,8 +97,6 @@ async function handleMessageUpsert(instanceId: string, data: any) {
             updateData.avatar = newAvatarUrl;
         }
     }
-    
-    // Atualiza o documento
     await updateDoc(conversationRef, updateData);
   }
 }
@@ -100,11 +110,9 @@ export async function POST(request: Request, context: RouteContext) {
 
     try {
       const parsedData = JSON.parse(rawBody);
-       // O payload pode vir como um array ou um objeto único
       payload = Array.isArray(parsedData) && parsedData.length > 0 ? parsedData[0] : parsedData;
     } catch (jsonError) {
       console.error('Webhook payload is not valid JSON. Raw body:', rawBody);
-      // Ainda salva o log de erro, mas não tenta processar mais
       await addDoc(collection(db, 'webhook_logs'), {
         instanceId: instanceId,
         payload: { error: "Corpo recebido não é um JSON válido.", rawBody: rawBody },
@@ -114,7 +122,6 @@ export async function POST(request: Request, context: RouteContext) {
       return new Response('Invalid JSON format', { status: 400 });
     }
 
-    // Salva o log original (útil para depuração)
     await addDoc(collection(db, 'webhook_logs'), {
       instanceId: instanceId,
       payload: payload,
@@ -122,11 +129,11 @@ export async function POST(request: Request, context: RouteContext) {
       isError: false,
     });
 
-    // Processa o evento específico
     if (payload.event === 'messages.upsert') {
-      await handleMessageUpsert(instanceId, payload.data);
+      // O 'data' pode ser um array, mas geralmente queremos o primeiro item para uma única mensagem
+      const messageData = Array.isArray(payload.data) ? payload.data[0] : payload.data;
+      await handleMessageUpsert(instanceId, messageData);
     }
-    // Outros eventos como 'connection.update' podem ser tratados aqui com 'else if'
 
     return NextResponse.json({ status: 'ok', message: `Webhook para ${instanceId} processado com sucesso` });
 
