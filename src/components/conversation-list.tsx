@@ -8,7 +8,7 @@ import ConversationItem from './conversation-item';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where, Query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 
@@ -38,18 +38,29 @@ export default function ConversationList({
   const [loading, setLoading] = useState(true);
     
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+        setLoading(false);
+        return;
+    }
 
     setLoading(true);
     const conversationsCollection = collection(db, 'conversations');
     
-    let q;
+    let q: Query | null = null;
+    
     if (selectedInstanceId && selectedInstanceId !== 'all') {
         q = query(conversationsCollection, where('instanceId', '==', selectedInstanceId), orderBy('timestamp', 'desc'));
     } else if (currentUser.role === 'admin') {
         q = query(conversationsCollection, orderBy('timestamp', 'desc'));
-    } else {
-        q = query(conversationsCollection, where('instanceId', 'in', currentUser.instanceIds || []), orderBy('timestamp', 'desc'));
+    } else if (currentUser.instanceIds && currentUser.instanceIds.length > 0) {
+        // Only query if the user actually has instances assigned
+        q = query(conversationsCollection, where('instanceId', 'in', currentUser.instanceIds), orderBy('timestamp', 'desc'));
+    }
+
+    if (!q) {
+        setConversations([]);
+        setLoading(false);
+        return;
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -68,14 +79,14 @@ export default function ConversationList({
   if (!currentUser) {
     return (
         <div className="flex flex-col h-full bg-[#111b21] text-gray-300 items-center justify-center">
-            <p>Carregando dados do usuário...</p>
+             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
     );
   }
 
-  const instanceName = currentUser.role === 'admin' ? 'Todas as Instâncias' : 'Instâncias do Usuário';
+  const instanceName = currentUser.role === 'admin' ? 'Todas as Instâncias' : 'Minhas Instâncias';
   
-  const allConversations = [adminConversation, ...conversations];
+  const allConversations = currentUser.role === 'admin' ? [adminConversation, ...conversations] : conversations;
 
   return (
     <div className="flex flex-col h-full bg-[#111b21] text-gray-300">

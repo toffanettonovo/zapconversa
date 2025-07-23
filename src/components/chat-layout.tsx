@@ -8,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { collection, doc, onSnapshot, getDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
-import { Loader2, UserCircle, LogOut, Settings, Shield } from 'lucide-react';
+import { Loader2, Shield, Settings, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,10 +30,10 @@ export default function ChatLayout() {
   
   const [userData, setUserData] = useState<User | null>(null);
   const [instances, setInstances] = useState<Instance[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [loadingUserData, setLoadingUserData] = useState(true);
+  const [loadingInstances, setLoadingInstances] = useState(true);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('all');
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-
 
   useEffect(() => {
     if (user) {
@@ -42,7 +42,7 @@ export default function ChatLayout() {
         if (doc.exists()) {
           setUserData({ id: doc.id, ...doc.data() } as User);
         } else {
-          setUserData({
+           setUserData({
             id: user.uid,
             email: user.email || '',
             name: user.displayName || 'Usuário sem Perfil',
@@ -50,22 +50,25 @@ export default function ChatLayout() {
             instanceIds: [],
           });
         }
+        setLoadingUserData(false);
       });
 
       const instancesCollectionRef = collection(db, 'instances');
-       const unsubInstances = onSnapshot(instancesCollectionRef, (snapshot) => {
+      const unsubInstances = onSnapshot(instancesCollectionRef, (snapshot) => {
         const instancesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Instance));
         setInstances(instancesList);
+        setLoadingInstances(false);
       });
-
-      setLoadingData(false);
 
       return () => {
         unsubUser();
         unsubInstances();
       };
+    } else if (!authLoading) {
+      setLoadingUserData(false);
+      setLoadingInstances(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   useEffect(() => {
     let unsub: (() => void) | null = null;
@@ -127,7 +130,7 @@ export default function ChatLayout() {
     console.log('Settings clicked');
   };
 
-  if (authLoading || loadingData) {
+  if (authLoading || loadingUserData || loadingInstances) {
      return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
