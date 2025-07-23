@@ -42,9 +42,10 @@ async function handleMessageUpsert(instanceId: string, data: any) {
   const conversationDocSnap = await getDoc(conversationRef);
 
   if (!conversationDocSnap.exists()) {
-    // Se a conversa não existe, cria
+    // Se a conversa não existe, primeiro busca a foto de perfil
     const profilePicUrl = await getProfilePicUrl(instanceId, conversationId);
 
+    // Depois, cria o documento com a foto (ou um placeholder)
     await setDoc(conversationRef, {
       id: conversationId,
       name: data.pushName || conversationId, // Usa o pushName se disponível
