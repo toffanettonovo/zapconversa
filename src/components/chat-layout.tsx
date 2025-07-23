@@ -29,9 +29,16 @@ export default function ChatLayout() {
         if (doc.exists()) {
           setUserData({ id: doc.id, ...doc.data() } as User);
         } else {
-          // Handle case where user exists in Auth but not Firestore
-          // User might have been created in console, but not in our 'users' collection
-          setUserData(null);
+          // User exists in Auth but not in Firestore. 
+          // Set a minimal user object so the UI can render basic info
+          // and they can access the admin panel to create their profile.
+          setUserData({
+            id: user.uid,
+            email: user.email || '',
+            name: user.displayName || 'Usuário sem Perfil',
+            role: 'user', // Default role
+            instanceIds: [],
+          });
         }
       });
 
@@ -62,9 +69,7 @@ export default function ChatLayout() {
   } : null;
 
   const handleAdminClick = () => {
-    if (userData?.role === 'admin') {
       setSelectedConversationId('admin');
-    }
   };
 
   const handleSettingsClick = () => {
@@ -106,9 +111,8 @@ export default function ChatLayout() {
                 </div>
             </div>
             <div className="flex items-center gap-4 text-sm">
-                 {userData?.role === 'admin' && (
+                 {/* This button is now always visible for any logged-in user */}
                   <Button variant="link" onClick={handleAdminClick} className="text-gray-300 hover:text-white p-0 h-auto">Admin Sistema</Button>
-                )}
                 <Button variant="link" onClick={handleSettingsClick} className="text-gray-300 hover:text-white p-0 h-auto">Configurações</Button>
             </div>
         </header>

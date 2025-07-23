@@ -30,9 +30,8 @@ export default function ConversationList({
 
   const instanceName = currentUser.role === 'admin' ? 'Todas as Instâncias' : 'Instâncias do Usuário';
 
-  const availableConversations = currentUser.role === 'admin' 
-    ? conversations
-    : conversations.filter(c => c.id === 'admin'); // Should filter by instanceIds later
+  // Any authenticated user can see the admin panel conversation now.
+  const availableConversations = conversations;
 
   return (
     <div className="flex flex-col h-full bg-[#111b21] text-gray-300">
