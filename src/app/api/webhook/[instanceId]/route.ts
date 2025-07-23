@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { broadcast } from '../live-log/route'; // Importa a função de broadcast diretamente
 
 type RouteContext = {
   params: {
@@ -9,43 +10,22 @@ type RouteContext = {
   };
 };
 
-function getLiveLogUrl() {
-  // Prefer the production Vercel URL if available
-  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/live-log`;
-  }
-  // Fallback to the preview URL for development environments
-  if (process.env.NEXT_PUBLIC_WEB_PREVIEW_URL) {
-    return `${process.env.NEXT_PUBLIC_WEB_PREVIEW_URL}/api/live-log`;
-  }
-  // Default for local development
-  return 'http://localhost:9002/api/live-log';
-}
-
-async function notifyLiveLog(data: string) {
-    // Fire-and-forget POST to the live log endpoint. No need to wait for it.
-    const liveLogUrl = getLiveLogUrl();
-    fetch(liveLogUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: data,
-    }).catch(console.error);
-}
-
 export async function POST(request: Request, context: RouteContext) {
   const { instanceId } = context.params;
   let rawBody: string = '';
 
   try {
     rawBody = await request.text();
-    // Notify the live log immediately, before any processing.
-    await notifyLiveLog(`Instance: ${instanceId}\n\n${rawBody}`);
     
+    // AÇÃO Nº 1: Notificar o log ao vivo IMEDIATAMENTE com o corpo bruto.
+    // Isso é síncrono e direto, sem `fetch` ou chamadas de rede.
+    broadcast(`Instance: ${instanceId}\n\n${rawBody}`);
+    
+    // O resto da lógica para salvar no Firestore continua como antes.
     let payload;
     let dataToLog;
 
     try {
-      // The body might be an array with one object, or just the object.
       const parsedBody = JSON.parse(rawBody);
       
       if (Array.isArray(parsedBody) && parsedBody.length > 0) {
@@ -56,7 +36,6 @@ export async function POST(request: Request, context: RouteContext) {
       payload = dataToLog;
 
     } catch (e) {
-      // If parsing fails, log the raw text body.
       payload = {
         error: "Corpo recebido não é um JSON válido ou está em formato inesperado.",
         rawBody: rawBody,
@@ -85,6 +64,9 @@ export async function POST(request: Request, context: RouteContext) {
         errorPayload.details = String(error);
     }
     
+    // Notifica o log ao vivo também em caso de erro.
+    broadcast(`CRITICAL ERROR on instance ${instanceId}:\n\n${JSON.stringify(errorPayload, null, 2)}`);
+
     try {
         await addDoc(collection(db, 'webhook_logs'), {
             instanceId: instanceId,

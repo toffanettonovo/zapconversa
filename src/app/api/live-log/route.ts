@@ -1,13 +1,13 @@
 // src/app/api/live-log/route.ts
 
-// This is a simple in-memory message bus.
-// In a real-world scenario, you'd use a more robust solution like Redis Pub/Sub.
-const clients = new Map<string, (data: string) => void>();
+// Esta é a nossa fila de clientes conectados.
+// Usamos `export` para que a rota do webhook possa acessá-la diretamente.
+export const clients = new Map<string, (data: string) => void>();
 
-function broadcast(data: string) {
+// Esta função agora é exportada para ser chamada diretamente de qualquer lugar do servidor.
+export function broadcast(data: string) {
   for (const send of clients.values()) {
-    // IMPORTANT: Send the raw data without trying to parse/format it.
-    // This makes the logger robust against any type of webhook body.
+    // Envia os dados brutos. Sem `JSON.stringify` ou qualquer formatação.
     send(data);
   }
 }
@@ -17,14 +17,13 @@ export async function GET(req: Request) {
     start(controller) {
       const id = Date.now().toString() + Math.random();
       const send = (data: string) => {
-        // The data is now a simple string, no need to stringify.
-        // It's sent in the EventStream format `data: <content>\n\n`.
+        // Envia os dados no formato EventStream: `data: <content>\n\n`.
         controller.enqueue(`data: ${data}\n\n`);
       };
 
       clients.set(id, send);
-      
-      // Send a simple confirmation message on connection
+
+      // Confirmação de conexão para o cliente
       send(JSON.stringify({ status: 'connected', message: 'Live log stream started.'}));
 
       req.signal.addEventListener('abort', () => {
@@ -43,6 +42,7 @@ export async function GET(req: Request) {
   });
 }
 
+// O POST aqui ainda pode ser útil para testes futuros, mas nosso webhook não o usará mais.
 export async function POST(req: Request) {
   try {
     const data = await req.text();
