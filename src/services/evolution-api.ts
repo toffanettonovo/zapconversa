@@ -122,6 +122,10 @@ export async function sendTextMessage(instanceId: string, number: string, text: 
       },
       body: JSON.stringify({
         number: number.split('@')[0], // Garante que estamos enviando apenas o número
+        options: {
+          delay: 1200,
+          presence: 'composing',
+        },
         textMessage: {
           text: text,
         },
