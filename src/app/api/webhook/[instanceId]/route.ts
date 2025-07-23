@@ -57,12 +57,23 @@ async function handleMessageUpsert(instanceId: string, data: any) {
       instanceId: instanceId, // Associa a conversa à instância
     });
   } else {
-    // Se a conversa já existe, atualiza
-     await updateDoc(conversationRef, {
+    // Se a conversa já existe, prepara a atualização
+    const updateData: any = {
       lastMessage: messageText,
       timestamp: serverTimestamp(),
-      // Aqui teríamos uma lógica para incrementar `unreadCount` se necessário
-    });
+    };
+
+    // Verifica se o avatar atual é um placeholder antes de tentar buscar um novo
+    const currentData = conversationDocSnap.data();
+    if (currentData && currentData.avatar && currentData.avatar.includes('placehold.co')) {
+        const newAvatarUrl = await getProfilePicUrl(instanceId, conversationId);
+        if (newAvatarUrl) {
+            updateData.avatar = newAvatarUrl;
+        }
+    }
+    
+    // Atualiza o documento
+    await updateDoc(conversationRef, updateData);
   }
 }
 
