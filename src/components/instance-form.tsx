@@ -17,7 +17,7 @@ const formSchema = z.object({
   name: z.string().min(1, 'O nome é obrigatório.'),
   apiUrl: z.string().url('A URL da API é inválida.'),
   apiKey: z.string().min(1, 'A chave da API é obrigatória.'),
-  webhookUrl: z.string().url('A URL do Webhook é inválida.'),
+  webhookUrl: z.string().min(1, 'A URL do Webhook é obrigatória.'),
   isActive: z.boolean(),
 });
 
