@@ -2,11 +2,43 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { users, instances } from '@/lib/data';
+import { type User, type Instance } from '@/lib/data';
 import { Badge } from './ui/badge';
-import { Circle, PlusCircle } from 'lucide-react';
+import { Circle, Loader2, PlusCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function AdminPanel() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [instances, setInstances] = useState<Instance[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const usersCollection = collection(db, 'users');
+        const usersSnapshot = await getDocs(usersCollection);
+        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
+        setUsers(usersList);
+
+        const instancesCollection = collection(db, 'instances');
+        const instancesSnapshot = await getDocs(instancesCollection);
+        const instancesList = instancesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Instance[];
+        setInstances(instancesList);
+
+      } catch (error) {
+        console.error("Error fetching data: ", error);
+        // Here you could show a toast message to the user
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   return (
     <div className="flex-1 flex flex-col bg-secondary/30">
       <header className="p-4 border-b border-border bg-card">
@@ -31,6 +63,11 @@ export default function AdminPanel() {
                 </Button>
               </CardHeader>
               <CardContent>
+                {loading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -57,6 +94,7 @@ export default function AdminPanel() {
                     ))}
                   </TableBody>
                 </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -73,6 +111,11 @@ export default function AdminPanel() {
                 </Button>
               </CardHeader>
               <CardContent>
+                 {loading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -102,6 +145,7 @@ export default function AdminPanel() {
                     ))}
                   </TableBody>
                 </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

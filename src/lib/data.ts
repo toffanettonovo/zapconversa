@@ -22,6 +22,15 @@ export type User = {
   instance: string;
 };
 
+export type Instance = {
+  id: string;
+  name: string;
+  apiUrl: string;
+  webhook: string;
+  status: 'connected' | 'disconnected';
+};
+
+
 export const conversations: Conversation[] = [
   {
     id: 'admin',
@@ -81,17 +90,6 @@ export const messages: Record<string, Message[]> = {
     { id: '2-2', text: 'Carlos: Alguém pode revisar o copy?', sender: 'them', timestamp: '10:35' },
   ],
 };
-
-export const users: User[] = [
-    { id: '1', name: 'Admin Geral', role: 'admin', instance: 'Principal' },
-    { id: '2', name: 'Ana Silva', role: 'user', instance: 'Principal' },
-    { id: '3', name: 'Carlos Souza', role: 'user', instance: 'Secundária' },
-];
-
-export const instances = [
-    { id: '1', name: 'Principal', apiUrl: 'https://api.principal.com', webhook: 'https://webhook.principal.com', status: 'connected' },
-    { id: '2', name: 'Secundária', apiUrl: 'https://api.secundaria.com', webhook: 'https://webhook.secundaria.com', status: 'disconnected' },
-];
 
 // This is now a placeholder, the actual user data will be fetched via authentication
 export const currentUser = {
