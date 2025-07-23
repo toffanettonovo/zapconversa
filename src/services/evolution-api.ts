@@ -122,9 +122,7 @@ export async function sendTextMessage(instanceId: string, number: string, text: 
       },
       body: JSON.stringify({
         number: number.split('@')[0],
-        textMessage: {
-          text: text,
-        },
+        text: text,
       }),
       cache: 'no-store',
     });
