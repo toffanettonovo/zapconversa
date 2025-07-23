@@ -16,6 +16,7 @@ import { Checkbox } from './ui/checkbox';
 import { ScrollArea } from './ui/scroll-area';
 
 const formSchema = z.object({
+  id: z.string().optional(), // Optional UID field
   name: z.string().min(1, 'O nome é obrigatório.'),
   email: z.string().email('O e-mail é inválido.'),
   password: z.string().optional(),
@@ -46,6 +47,7 @@ export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: User
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: user ? { ...user, instanceIds: user.instanceIds || [] } : {
+      id: '',
       name: '',
       email: '',
       password: '',
@@ -61,6 +63,7 @@ export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: User
   
   useEffect(() => {
     const defaultValues = user ? { ...user, password: '', instanceIds: user.instanceIds || [] } : {
+        id: '',
         name: '',
         email: '',
         password: '',
@@ -72,7 +75,8 @@ export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: User
 
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!isEditing && !values.password) {
+    // If not editing and no UID is provided, password is required
+    if (!isEditing && !values.id && !values.password) {
         form.setError("password", { type: "manual", message: "A senha é obrigatória para novos usuários." });
         return;
     }
@@ -82,7 +86,7 @@ export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: User
       dataToSave.instanceIds = []; // Admins have implicit access to all
     }
 
-    onSave(user ? { ...user, ...dataToSave } : dataToSave);
+    onSave(dataToSave);
   };
 
   return (
@@ -96,6 +100,22 @@ export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: User
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {!isEditing && (
+              <FormField
+                control={form.control}
+                name="id"
+                render={({ field }) => (
+                  <FormItem>
+                    <Label htmlFor="id">User ID (UID) - Opcional</Label>
+                     <FormControl>
+                          <Input id="id" {...field} className="bg-[#2a3942] border-none" placeholder="Cole o UID de um usuário existente" />
+                     </FormControl>
+                    <p className="text-xs text-gray-500 mt-1">Preencha este campo se o usuário já existe no Firebase Authentication.</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <FormField
               control={form.control}
               name="name"
@@ -122,21 +142,20 @@ export function UserForm({ isOpen, onOpenChange, onSave, user, instances }: User
                 </FormItem>
               )}
             />
-            {!isEditing && (
-                 <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label htmlFor="password">Senha</Label>
-                       <FormControl>
-                            <Input id="password" type="password" {...field} className="bg-[#2a3942] border-none" />
-                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-            )}
+             <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <Label htmlFor="password">Senha</Label>
+                   <FormControl>
+                        <Input id="password" type="password" {...field} className="bg-[#2a3942] border-none" placeholder={isEditing ? 'Deixe em branco para não alterar' : ''} />
+                   </FormControl>
+                  <p className="text-xs text-gray-500 mt-1">Obrigatório apenas se o usuário não tiver um UID.</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
                 control={form.control}
                 name="role"

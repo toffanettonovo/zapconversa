@@ -75,22 +75,30 @@ export default function AdminPanel() {
 
   const handleSaveUser = async (userData: Omit<User, 'id'> & { id?: string; password?: string }) => {
     try {
-      if (userData.id) { // Editing an existing user
-        const userRef = doc(db, 'users', userData.id);
-        const { id, password, ...updateData } = userData;
-        await updateDoc(userRef, updateData as any);
-         toast({ title: "Sucesso", description: "Usuário atualizado." });
-      } else { // Creating a new user
-        if (!userData.password || !userData.email) {
+      const { id, password, ...firestoreData } = userData;
+
+      // Scenario 1: Editing an existing user (ID will be the original user.id)
+      if (isUserFormOpen && selectedUser) {
+        const userRef = doc(db, 'users', selectedUser.id);
+        await updateDoc(userRef, firestoreData as any);
+        toast({ title: "Sucesso", description: "Usuário atualizado." });
+      } 
+      // Scenario 2: Creating a profile for an existing Auth user (ID is provided in the form)
+      else if (id) {
+         await setDoc(doc(db, "users", id), firestoreData);
+         toast({ title: "Sucesso", description: "Perfil de usuário criado com sucesso." });
+      }
+      // Scenario 3: Creating a new user from scratch
+      else {
+        if (!password || !userData.email) {
             throw new Error("Email e senha são obrigatórios para novos usuários.");
         }
-        const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+        const userCredential = await createUserWithEmailAndPassword(auth, userData.email, password);
         const newAuthUser = userCredential.user;
-
-        const { password, ...firestoreData } = userData;
         await setDoc(doc(db, "users", newAuthUser.uid), firestoreData);
         toast({ title: "Sucesso", description: "Usuário criado com sucesso." });
       }
+
       setIsUserFormOpen(false);
       setSelectedUser(undefined);
     } catch (error: any) {
@@ -104,7 +112,9 @@ export default function AdminPanel() {
   };
   
   const handleDeleteUser = async (userId: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) {
+    // Note: This only deletes from Firestore. The user still exists in Firebase Auth.
+    // A more complete solution would involve a Cloud Function to delete the user from Auth.
+    if (window.confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita e apenas removerá o perfil do banco de dados, não da autenticação.')) {
       try {
         await deleteDoc(doc(db, 'users', userId));
         toast({ title: "Sucesso", description: "Usuário excluído do banco de dados." });
