@@ -42,33 +42,32 @@ export async function POST(request: Request, context: RouteContext) {
     await notifyLiveLog(`Instance: ${instanceId}\n\n${rawBody}`);
     
     let payload;
+    let dataToLog;
 
     try {
+      // The body might be an array with one object, or just the object.
       const parsedBody = JSON.parse(rawBody);
       
       if (Array.isArray(parsedBody) && parsedBody.length > 0) {
-        payload = parsedBody[0];
+        dataToLog = parsedBody[0];
       } else {
-        payload = parsedBody;
+        dataToLog = parsedBody;
       }
+      payload = dataToLog;
 
     } catch (e) {
-      await addDoc(collection(db, 'webhook_logs'), {
-        instanceId: instanceId,
-        payload: {
-          error: "Corpo recebido não é um JSON válido ou está em formato inesperado.",
-          rawBody: rawBody,
-        },
-        receivedAt: serverTimestamp(),
-        isError: true,
-      });
-      return NextResponse.json({ status: 'ok', message: `Webhook para ${instanceId} recebido com corpo não-JSON.` });
+      // If parsing fails, log the raw text body.
+      payload = {
+        error: "Corpo recebido não é um JSON válido ou está em formato inesperado.",
+        rawBody: rawBody,
+      };
     }
 
     await addDoc(collection(db, 'webhook_logs'), {
       instanceId: instanceId,
       payload: payload,
       receivedAt: serverTimestamp(),
+      isError: !!payload.error,
     });
 
     return NextResponse.json({ status: 'ok', message: `Webhook para ${instanceId} recebido com sucesso` });
