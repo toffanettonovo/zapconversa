@@ -6,83 +6,89 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { AnimatePresence, motion } from 'framer-motion';
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Loader2 } from 'lucide-react';
 
-interface LiveLog {
+interface LogEntry {
   id: string;
-  data: string;
-  timestamp: string;
+  instanceId: string;
+  payload: any;
+  receivedAt: Date | null;
+  isError: boolean;
 }
 
+function formatTimestamp(timestamp: any): string {
+    if (!timestamp) return '...';
+    // a data do firestore pode vir como um objeto com seconds e nanoseconds
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+     return new Date(date).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+    });
+}
+
+function renderPayload(payload: any) {
+  let content;
+  let isError = false;
+  if (payload && payload.error) {
+    isError = true;
+    content = payload.rawBody ? `ERRO: ${payload.error}\n\nConteúdo Recebido:\n${payload.rawBody}` : JSON.stringify(payload, null, 2);
+  } else {
+    content = JSON.stringify(payload, null, 2);
+  }
+  
+  return (
+    <pre className={`text-xs text-gray-300 bg-black/30 p-3 rounded-md overflow-x-auto whitespace-pre-wrap break-all ${isError ? 'border border-red-500/50' : ''}`}>
+      {content}
+    </pre>
+  );
+}
+
+
 export default function WebhookLogs() {
-  const [logs, setLogs] = useState<LiveLog[]>([]);
-  const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const eventSource = new EventSource('/api/live-log');
+    const logsCollection = collection(db, 'webhook_logs');
+    const q = query(logsCollection, orderBy('receivedAt', 'desc'), limit(50));
 
-    eventSource.onopen = () => {
-      setStatus('connected');
-    };
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const logsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        receivedAt: doc.data().receivedAt ? doc.data().receivedAt.toDate() : new Date(),
+      })) as LogEntry[];
+      setLogs(logsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching logs from Firestore: ", error);
+      setLoading(false);
+    });
 
-    eventSource.onerror = () => {
-      setStatus('disconnected');
-      eventSource.close();
-    };
-
-    eventSource.onmessage = (event) => {
-      try {
-        const timestamp = new Date().toLocaleString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
-        
-        // Try to parse the data to see if it's our initial connection message
-        try {
-            const parsedData = JSON.parse(event.data);
-            if (parsedData.status === 'connected') {
-                // This is the connection confirmation, do nothing with it in the log view.
-                return;
-            }
-        } catch (e) {
-            // It's not the status message, so it's a real log.
-        }
-
-        const newLog: LiveLog = {
-          id: `log-${Date.now()}-${Math.random()}`,
-          data: event.data,
-          timestamp: timestamp,
-        };
-
-        setLogs((prevLogs) => [newLog, ...prevLogs].slice(0, 50)); // Keep only the last 50 logs
-      } catch (error) {
-        console.error("Failed to process event data:", error);
-      }
-    };
-
-    return () => {
-      eventSource.close();
-    };
+    return () => unsubscribe();
   }, []);
-
+  
   const getStatusBadge = () => {
-    switch (status) {
-      case 'connected':
-        return <Badge variant="default" className="bg-green-600 text-white">Conectado</Badge>;
-      case 'connecting':
-        return <Badge variant="secondary" className="animate-pulse">Conectando...</Badge>;
-      case 'disconnected':
-        return <Badge variant="destructive">Desconectado</Badge>;
+    if (loading) {
+        return <Badge variant="secondary" className="animate-pulse">Carregando...</Badge>;
     }
+    return <Badge variant="default" className="bg-blue-600 text-white">Monitorando Firestore</Badge>;
   };
+
 
   return (
     <Card className="bg-[#111b21] border-[#1f2c33]">
       <CardHeader>
         <div className="flex justify-between items-center">
             <div>
-                <CardTitle className="text-white">Log ao Vivo do Webhook</CardTitle>
-                <CardDescription>Visualização instantânea das requisições recebidas.</CardDescription>
+                <CardTitle className="text-white">Logs do Webhook</CardTitle>
+                <CardDescription>Visualização dos últimos 50 eventos recebidos (via Firestore).</CardDescription>
             </div>
             {getStatusBadge()}
         </div>
@@ -91,7 +97,12 @@ export default function WebhookLogs() {
         <ScrollArea className="h-[60vh] w-full pr-4">
           <div className="space-y-4">
             <AnimatePresence>
-            {logs.length > 0 ? logs.map((log) => (
+            {loading ? (
+                <div className="flex items-center justify-center text-center text-gray-400 py-8 h-full">
+                    <Loader2 className="h-8 w-8 animate-spin mr-2" />
+                    <p>Carregando logs do Firestore...</p>
+                </div>
+            ) : logs.length > 0 ? logs.map((log) => (
               <motion.div 
                 key={log.id} 
                 className="p-4 rounded-lg border border-[#2a3942] bg-[#202c33] origin-top"
@@ -101,16 +112,17 @@ export default function WebhookLogs() {
                 transition={{ duration: 0.3 }}
               >
                 <div className="flex justify-between items-center text-sm mb-2">
-                  <span className="font-semibold text-white">Requisição Recebida</span>
-                  <span className="text-gray-400">{log.timestamp}</span>
+                  <div className="flex items-center gap-2">
+                     <Badge variant={log.isError ? 'destructive': 'default'} className={log.isError ? '' : 'bg-green-600'}>{log.isError ? 'Erro' : 'Sucesso'}</Badge>
+                    <span className="font-semibold text-white">Instância: {log.instanceId}</span>
+                  </div>
+                  <span className="text-gray-400">{formatTimestamp(log.receivedAt)}</span>
                 </div>
-                <pre className="text-xs text-gray-300 bg-black/30 p-3 rounded-md overflow-x-auto whitespace-pre-wrap break-all">
-                  {log.data}
-                </pre>
+                {renderPayload(log.payload)}
               </motion.div>
             )) : (
               <div className="flex items-center justify-center text-center text-gray-400 py-8 h-full">
-                <p>Aguardando requisições... Envie uma mensagem ou use o botão de teste.</p>
+                <p>Nenhum log encontrado. Envie uma mensagem ou use o botão de teste.</p>
               </div>
             )}
             </AnimatePresence>
