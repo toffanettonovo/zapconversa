@@ -22,7 +22,7 @@ export async function getProfilePicUrl(instanceId: string, remoteJid: string): P
   }
 
   const { apiUrl, apiKey } = instance;
-  const endpoint = `${apiUrl}/chat/profile-pic/${remoteJid}`;
+  const endpoint = `${apiUrl}/chat/fetchProfile/${remoteJid}`;
   
   try {
     const response = await fetch(endpoint, {
@@ -34,7 +34,6 @@ export async function getProfilePicUrl(instanceId: string, remoteJid: string): P
     });
 
     if (!response.ok) {
-      // É comum não encontrar uma foto de perfil, então tratamos isso como um caso esperado.
       if (response.status === 404) {
         console.log(`Foto de perfil não encontrada para ${remoteJid} na instância ${instanceId}.`);
         return null;
@@ -44,7 +43,7 @@ export async function getProfilePicUrl(instanceId: string, remoteJid: string): P
     }
     
     const data = await response.json();
-    return data?.profile_pic_url || null;
+    return data?.profilePictureUrl || null;
 
   } catch (error) {
     console.error('Erro na chamada da API da Evolution para buscar foto de perfil:', error);
