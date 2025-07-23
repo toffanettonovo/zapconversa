@@ -24,8 +24,22 @@ async function handleMessageUpsert(instanceId: string, data: any) {
   const conversationRef = doc(db, 'conversations', conversationId);
   const messagesCollectionRef = collection(conversationRef, 'messages');
 
-  // Extrai o texto da mensagem (pode estar em `conversation` ou `extendedTextMessage.text`)
-  const messageText = messageData.conversation || messageData.extendedTextMessage?.text || '[Mídia não suportada]';
+  // Extrai o texto da mensagem (pode estar em `conversation` ou `extendedTextMessage.text` ou ser um tipo de mídia)
+  let messageText = '[Mídia não suportada]';
+  if (messageData.conversation) {
+    messageText = messageData.conversation;
+  } else if (messageData.extendedTextMessage?.text) {
+    messageText = messageData.extendedTextMessage.text;
+  } else if (messageData.audioMessage) {
+    messageText = 'Áudio';
+  } else if (messageData.imageMessage) {
+    messageText = 'Foto';
+  } else if (messageData.videoMessage) {
+    messageText = 'Vídeo';
+  } else if (messageData.stickerMessage) {
+    messageText = 'Figurinha';
+  }
+
 
   // 1. Salvar a nova mensagem na subcoleção
   await addDoc(messagesCollectionRef, {
