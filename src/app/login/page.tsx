@@ -50,6 +50,35 @@ export default function LoginPage() {
     }
   }
 
+  const handleTestWebhook = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/webhook/z8qbOTIMpDnXHCsGPDdM', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          event: 'testFromLoginButton',
+          data: { message: 'Este é um teste do botão da página de login.' },
+        }),
+      });
+      const result = await response.json();
+      toast({
+        title: 'Teste de Webhook Enviado',
+        description: `Resposta do servidor: ${JSON.stringify(result)}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao Testar Webhook',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
       <div className="absolute top-0 left-0 w-full h-[222px] bg-[#00a884]"></div>
@@ -96,6 +125,12 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
+           <div className="mt-4">
+              <Button onClick={handleTestWebhook} variant="outline" className="w-full" disabled={loading}>
+                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                 Testar Webhook POST
+              </Button>
+           </div>
         </CardContent>
       </Card>
     </div>
